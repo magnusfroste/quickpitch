@@ -109,7 +109,12 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
         
         if (videoTrack) {
           console.log("Playing local video track");
-          videoTrack.play("local-video");
+          const localPlayerContainer = document.createElement('div');
+          localPlayerContainer.id = `player-${uid}`;
+          localPlayerContainer.style.width = '100%';
+          localPlayerContainer.style.height = '100%';
+          document.getElementById('local-player')?.appendChild(localPlayerContainer);
+          videoTrack.play(localPlayerContainer.id);
         }
         
         setLocalTracks({ audioTrack, videoTrack });
@@ -199,10 +204,8 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
       <div className="max-w-6xl mx-auto h-full flex flex-col">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
-            <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg">
-              <div className="absolute inset-0">
-                <div className="w-full h-full" id="local-video"></div>
-              </div>
+            <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
+              <div id="local-player" className="absolute inset-0"></div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
               </div>
@@ -214,11 +217,10 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
                 return (
                   <div
                     key={user.uid}
-                    className="relative bg-white rounded-2xl overflow-hidden shadow-lg"
+                    className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]"
                   >
-                    <div className="absolute inset-0">
-                      <div className="w-full h-full" id={`remote-video-${user.uid}`}></div>
-                      {user.videoTrack.play(`remote-video-${user.uid}`)}
+                    <div id={`player-${user.uid}`} className="absolute inset-0">
+                      {user.videoTrack.play(`player-${user.uid}`)}
                     </div>
                     <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                       User {user.uid}
