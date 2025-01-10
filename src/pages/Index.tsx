@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import VideoRoom from "@/components/VideoRoom";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -10,14 +12,32 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Copy, Share2 } from "lucide-react";
+import { Copy, Share2, LogOut } from "lucide-react";
 
 const Index = () => {
   const [channelName, setChannelName] = useState("");
   const [inCall, setInCall] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const generateMeetingCode = () => {
-    // Always generate "lovable" as the meeting code
+    if (!user) {
+      toast.error("Please login to host a meeting");
+      navigate("/login");
+      return;
+    }
     setChannelName("lovable");
     return "lovable";
   };
@@ -49,6 +69,11 @@ const Index = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
+
   const joinMeeting = () => {
     if (!channelName) {
       toast.error("Please enter a meeting code");
@@ -69,9 +94,21 @@ const Index = () => {
     <div className="min-h-screen bg-apple-gray flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl p-8 shadow-lg">
-          <h1 className="text-2xl font-semibold text-apple-text mb-6">
-            Video Meeting
-          </h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-semibold text-apple-text">
+              Video Meeting
+            </h1>
+            {user && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
           <div className="space-y-4">
             <div className="flex gap-4">
               <Input
