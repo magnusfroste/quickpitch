@@ -62,16 +62,46 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
       client.on("user-left", handleUserLeft);
 
       try {
-        await client.join(appId, name, null, null);
-        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        // Request permissions before joining
+        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         
+        await client.join(appId, name, null, null);
+        
+        // Create tracks with specific configurations
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          encoderConfig: "music_standard"
+        });
+        
+        const videoTrack = await AgoraRTC.createCameraVideoTrack({
+          encoderConfig: {
+            width: 640,
+            height: 480,
+            frameRate: 30,
+            bitrateMin: 400,
+            bitrateMax: 1000,
+          }
+        });
+
         await client.publish([audioTrack, videoTrack]);
+        
+        // Play local video track immediately after creation
+        if (videoTrack) {
+          videoTrack.play("local-video");
+        }
+        
         setLocalTracks({ audioTrack, videoTrack });
         setStart(true);
       } catch (error) {
-        console.error(error);
-        toast.error("Failed to join the meeting");
+        console.error("Error initializing streams:", error);
+        if (error instanceof Error) {
+          if (error.name === "NotAllowedError") {
+            toast.error("Please allow camera and microphone access to join the meeting");
+          } else {
+            toast.error("Failed to join the meeting: " + error.message);
+          }
+        } else {
+          toast.error("Failed to join the meeting");
+        }
       }
     };
 
@@ -146,7 +176,6 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg">
               <div className="absolute inset-0">
                 <div className="w-full h-full" id="local-video"></div>
-                {localTracks.videoTrack.play("local-video")}
               </div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
