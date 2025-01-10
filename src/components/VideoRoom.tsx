@@ -4,12 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 
+// Make sure this App ID matches exactly with your Agora project
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
 // Temporary token - in production this should come from your token server
 const tempToken = "007eJxTYHgtMq9hd51lEd8zJolPF48+knvlsVo+/O3L2wfSRCp4jxQrMKSZmicnmSamGVuYJZqkJppamiamWJpZJlmaGSUmH+xvTG8IZGS480OHlZGBAkF8doac/LLEpJxUBgYAMNAi0w==";
 
-// Create an instance of the Agora client
-const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+// Create an instance of the Agora client with specific configurations
+const client = AgoraRTC.createClient({ 
+  mode: "rtc", 
+  codec: "vp8",
+  role: "host" // Explicitly set role as host
+});
 
 interface VideoRoomProps {
   channelName: string;
