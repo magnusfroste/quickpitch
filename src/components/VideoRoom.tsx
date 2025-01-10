@@ -17,7 +17,10 @@ interface VideoRoomProps {
 const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
   const [users, setUsers] = useState<any[]>([]);
   const [start, setStart] = useState<boolean>(false);
-  const [localTracks, setLocalTracks] = useState<any[]>([]);
+  const [localTracks, setLocalTracks] = useState<{
+    audioTrack: any;
+    videoTrack: any;
+  }>({ audioTrack: null, videoTrack: null });
   const [trackState, setTrackState] = useState({ video: true, audio: true });
 
   useEffect(() => {
@@ -60,9 +63,11 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
 
       try {
         await client.join(appId, name, null, null);
-        const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
-        await client.publish([microphoneTrack, cameraTrack]);
-        setLocalTracks([microphoneTrack, cameraTrack]);
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        
+        await client.publish([audioTrack, videoTrack]);
+        setLocalTracks({ audioTrack, videoTrack });
         setStart(true);
       } catch (error) {
         console.error(error);
@@ -73,9 +78,13 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
     init(channelName);
 
     return () => {
-      for (let localTrack of localTracks) {
-        localTrack.stop();
-        localTrack.close();
+      if (localTracks.audioTrack) {
+        localTracks.audioTrack.stop();
+        localTracks.audioTrack.close();
+      }
+      if (localTracks.videoTrack) {
+        localTracks.videoTrack.stop();
+        localTracks.videoTrack.close();
       }
       client.off("user-published", handleUserPublished);
       client.off("user-unpublished", handleUserUnpublished);
@@ -87,23 +96,42 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
   }, [channelName]);
 
   const mute = async (type: "audio" | "video") => {
-    if (type === "audio") {
-      await localTracks[0].setEnabled(!trackState.audio);
-      setTrackState((ps) => {
-        return { ...ps, audio: !ps.audio };
-      });
-    } else if (type === "video") {
-      await localTracks[1].setEnabled(!trackState.video);
-      setTrackState((ps) => {
-        return { ...ps, video: !ps.video };
-      });
+    try {
+      if (type === "audio") {
+        if (!localTracks.audioTrack) {
+          toast.error("Audio track not initialized");
+          return;
+        }
+        await localTracks.audioTrack.setEnabled(!trackState.audio);
+        setTrackState((ps) => ({
+          ...ps,
+          audio: !ps.audio,
+        }));
+      } else if (type === "video") {
+        if (!localTracks.videoTrack) {
+          toast.error("Video track not initialized");
+          return;
+        }
+        await localTracks.videoTrack.setEnabled(!trackState.video);
+        setTrackState((ps) => ({
+          ...ps,
+          video: !ps.video,
+        }));
+      }
+    } catch (error) {
+      console.error("Error toggling track:", error);
+      toast.error(`Failed to ${trackState[type] ? "mute" : "unmute"} ${type}`);
     }
   };
 
   const leaveChannel = async () => {
-    for (let localTrack of localTracks) {
-      localTrack.stop();
-      localTrack.close();
+    if (localTracks.audioTrack) {
+      localTracks.audioTrack.stop();
+      localTracks.audioTrack.close();
+    }
+    if (localTracks.videoTrack) {
+      localTracks.videoTrack.stop();
+      localTracks.videoTrack.close();
     }
     await client.leave();
     setStart(false);
@@ -114,11 +142,11 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
     <div className="h-screen bg-apple-gray p-4">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-          {start && localTracks[1] && (
+          {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg">
               <div className="absolute inset-0">
                 <div className="w-full h-full" id="local-video"></div>
-                {localTracks[1].play("local-video")}
+                {localTracks.videoTrack.play("local-video")}
               </div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
