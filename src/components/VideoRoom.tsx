@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
-import { AgoraVideoPlayer, createClient, createMicrophoneAndCameraTracks, IMicrophoneAndCameraTracks } from "agora-rtc-react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 
-const appId = f57cb5af386a4ea595ad9668d9b522ac
+const appId = "f57cb5af386a4ea595ad9668d9b522ac";
 
-const useClient = createClient({ codec: "vp8", mode: "rtc" });
-const useMicrophoneAndCameraTracks = createMicrophoneAndCameraTracks();
+// Create an instance of the Agora client
+const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
 interface VideoRoomProps {
   channelName: string;
@@ -18,8 +17,7 @@ interface VideoRoomProps {
 const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
   const [users, setUsers] = useState<any[]>([]);
   const [start, setStart] = useState<boolean>(false);
-  const client = useClient();
-  const { ready, tracks } = useMicrophoneAndCameraTracks();
+  const [localTracks, setLocalTracks] = useState<any[]>([]);
   const [trackState, setTrackState] = useState({ video: true, audio: true });
 
   useEffect(() => {
@@ -55,7 +53,9 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
 
       try {
         await client.join(appId, name, null, null);
-        if (tracks) await client.publish([tracks[0], tracks[1]]);
+        const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracksWithMediaOptions();
+        await client.publish([microphoneTrack, cameraTrack]);
+        setLocalTracks([microphoneTrack, cameraTrack]);
         setStart(true);
       } catch (error) {
         console.error(error);
@@ -63,30 +63,30 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
       }
     };
 
-    if (ready && tracks) {
-      try {
-        init(channelName);
-      } catch (error) {
-        console.error(error);
-      }
-    }
+    init(channelName);
 
     return () => {
-      client.leave();
-      client.removeAllListeners();
-      tracks?.[0].close();
-      tracks?.[1].close();
+      for (let localTrack of localTracks) {
+        localTrack.stop();
+        localTrack.close();
+      }
+      client.off("user-published");
+      client.off("user-unpublished");
+      client.off("user-left");
+      client.leave().catch((err) => {
+        console.log(err);
+      });
     };
-  }, [channelName, client, ready, tracks]);
+  }, [channelName]);
 
   const mute = async (type: "audio" | "video") => {
     if (type === "audio") {
-      await tracks?.[0].setEnabled(!trackState.audio);
+      await localTracks[0].setEnabled(!trackState.audio);
       setTrackState((ps) => {
         return { ...ps, audio: !ps.audio };
       });
     } else if (type === "video") {
-      await tracks?.[1].setEnabled(!trackState.video);
+      await localTracks[1].setEnabled(!trackState.video);
       setTrackState((ps) => {
         return { ...ps, video: !ps.video };
       });
@@ -94,10 +94,11 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
   };
 
   const leaveChannel = async () => {
+    for (let localTrack of localTracks) {
+      localTrack.stop();
+      localTrack.close();
+    }
     await client.leave();
-    client.removeAllListeners();
-    tracks?.[0].close();
-    tracks?.[1].close();
     setStart(false);
     onLeave?.();
   };
@@ -106,13 +107,11 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
     <div className="h-screen bg-apple-gray p-4">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-          {start && tracks && (
+          {start && localTracks[1] && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg">
               <div className="absolute inset-0">
-                <AgoraVideoPlayer
-                  videoTrack={tracks[1]}
-                  className="w-full h-full object-cover"
-                />
+                <div className="w-full h-full" id="local-video"></div>
+                {localTracks[1].play("local-video")}
               </div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
@@ -128,10 +127,8 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
                     className="relative bg-white rounded-2xl overflow-hidden shadow-lg"
                   >
                     <div className="absolute inset-0">
-                      <AgoraVideoPlayer
-                        videoTrack={user.videoTrack}
-                        className="w-full h-full object-cover"
-                      />
+                      <div className="w-full h-full" id={`remote-video-${user.uid}`}></div>
+                      {user.videoTrack.play(`remote-video-${user.uid}`)}
                     </div>
                     <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                       User {user.uid}
