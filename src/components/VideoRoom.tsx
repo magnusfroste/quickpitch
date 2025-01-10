@@ -21,39 +21,46 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
   const [trackState, setTrackState] = useState({ video: true, audio: true });
 
   useEffect(() => {
-    let init = async (name: string) => {
-      client.on("user-published", async (user, mediaType) => {
-        await client.subscribe(user, mediaType);
-        if (mediaType === "video") {
-          setUsers((prevUsers) => {
-            return [...prevUsers, user];
-          });
-        }
-        if (mediaType === "audio") {
-          user.audioTrack?.play();
-        }
-      });
+    // Handler for when a remote user publishes their stream
+    const handleUserPublished = async (user: any, mediaType: any) => {
+      await client.subscribe(user, mediaType);
+      if (mediaType === "video") {
+        setUsers((prevUsers) => {
+          return [...prevUsers, user];
+        });
+      }
+      if (mediaType === "audio") {
+        user.audioTrack?.play();
+      }
+    };
 
-      client.on("user-unpublished", (user, mediaType) => {
-        if (mediaType === "audio") {
-          user.audioTrack?.stop();
-        }
-        if (mediaType === "video") {
-          setUsers((prevUsers) => {
-            return prevUsers.filter((User) => User.uid !== user.uid);
-          });
-        }
-      });
-
-      client.on("user-left", (user) => {
+    // Handler for when a remote user unpublishes their stream
+    const handleUserUnpublished = (user: any, mediaType: any) => {
+      if (mediaType === "audio") {
+        user.audioTrack?.stop();
+      }
+      if (mediaType === "video") {
         setUsers((prevUsers) => {
           return prevUsers.filter((User) => User.uid !== user.uid);
         });
+      }
+    };
+
+    // Handler for when a remote user leaves
+    const handleUserLeft = (user: any) => {
+      setUsers((prevUsers) => {
+        return prevUsers.filter((User) => User.uid !== user.uid);
       });
+    };
+
+    let init = async (name: string) => {
+      client.on("user-published", handleUserPublished);
+      client.on("user-unpublished", handleUserUnpublished);
+      client.on("user-left", handleUserLeft);
 
       try {
         await client.join(appId, name, null, null);
-        const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracksWithMediaOptions();
+        const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
         await client.publish([microphoneTrack, cameraTrack]);
         setLocalTracks([microphoneTrack, cameraTrack]);
         setStart(true);
@@ -70,9 +77,9 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
         localTrack.stop();
         localTrack.close();
       }
-      client.off("user-published");
-      client.off("user-unpublished");
-      client.off("user-left");
+      client.off("user-published", handleUserPublished);
+      client.off("user-unpublished", handleUserUnpublished);
+      client.off("user-left", handleUserLeft);
       client.leave().catch((err) => {
         console.log(err);
       });
