@@ -9,13 +9,13 @@ interface VideoRoomProps {
 
 const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
   const appId = "f57cb5af386a4ea595ad9668d9b522ac";
-  // Using a temporary token for the "lovable" channel
-  const token = "007eJxTYPjzMuGQ5pGZvxgWKt1/9/vBm4eP5+1YLLbmxMGtR7Yd+2GroMCQbGFpYWJqYZyUZGFhYZqcZGxpaWaQmGRgYWGWmGz6+ldKQyAjw+1tP5kYGSAQxGdhKEktLmFgAACumB+U";
+  // Using the provided token for the "lovable" channel
+  const token = "007eJxTYNh1qWMKg0Qqx3vDkDeva7mnJKUYzdp3c4KGauc1jUYe5VgFhjRT8+Qk08Q0YwuzRJPURFNL08QUSzMzixTLJFMjo8Rkk0mN6Q2BjAyLDG+yMjJAIIjPzpCTX5aYlJPKwAAAVwcfkg==";
   
   const rtcProps = {
     appId: appId,
     channel: channelName,
-    token: token, // Using the temporary token
+    token: token,
     enableScreensharing: true,
   };
 
