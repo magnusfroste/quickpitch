@@ -109,12 +109,17 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
         
         if (videoTrack) {
           console.log("Playing local video track");
-          const localPlayerContainer = document.createElement('div');
-          localPlayerContainer.id = `player-${uid}`;
-          localPlayerContainer.style.width = '100%';
-          localPlayerContainer.style.height = '100%';
-          document.getElementById('local-player')?.appendChild(localPlayerContainer);
-          videoTrack.play(localPlayerContainer.id);
+          // Create container if it doesn't exist
+          const localPlayerContainer = document.getElementById('local-player');
+          if (localPlayerContainer) {
+            // Clear any existing content
+            localPlayerContainer.innerHTML = '';
+            // Play the video track directly in the container
+            videoTrack.play('local-player', { fit: 'cover' });
+            console.log("Local video track playing in container");
+          } else {
+            console.error("Local player container not found");
+          }
         }
         
         setLocalTracks({ audioTrack, videoTrack });
@@ -205,7 +210,7 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
-              <div id="local-player" className="absolute inset-0"></div>
+              <div id="local-player" className="absolute inset-0 bg-gray-800"></div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
               </div>
@@ -219,7 +224,7 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
                     key={user.uid}
                     className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]"
                   >
-                    <div id={`player-${user.uid}`} className="absolute inset-0">
+                    <div id={`player-${user.uid}`} className="absolute inset-0 bg-gray-800">
                       {user.videoTrack.play(`player-${user.uid}`)}
                     </div>
                     <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
