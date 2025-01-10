@@ -28,7 +28,12 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
   const [trackState, setTrackState] = useState({ video: true, audio: true });
 
   useEffect(() => {
-    // Handler for when a remote user publishes their stream
+    if (channelName !== "lovable") {
+      toast.error("Invalid channel. Please use 'lovable' as the meeting code.");
+      onLeave?.();
+      return;
+    }
+
     const handleUserPublished = async (user: any, mediaType: any) => {
       console.log("Remote user published:", user.uid, mediaType);
       await client.subscribe(user, mediaType);
@@ -46,7 +51,6 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
       }
     };
 
-    // Handler for when a remote user unpublishes their stream
     const handleUserUnpublished = (user: any, mediaType: any) => {
       console.log("Remote user unpublished:", user.uid, mediaType);
       if (mediaType === "audio") {
@@ -59,7 +63,6 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
       }
     };
 
-    // Handler for when a remote user leaves
     const handleUserLeft = (user: any) => {
       console.log("Remote user left:", user.uid);
       setUsers((prevUsers) => {
@@ -79,7 +82,7 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
         console.log("Media permissions granted");
         
         console.log("Joining channel:", name);
-        const uid = await client.join(appId, name, tempToken, null);
+        const uid = await client.join(appId, "lovable", tempToken, null);
         console.log("Joined channel successfully. UID:", uid);
         
         console.log("Creating audio track...");

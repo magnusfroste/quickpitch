@@ -17,10 +17,9 @@ const Index = () => {
   const [inCall, setInCall] = useState(false);
 
   const generateMeetingCode = () => {
-    // Generate a random 6-character meeting code
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setChannelName(code);
-    return code;
+    // Always generate "lovable" as the meeting code
+    setChannelName("lovable");
+    return "lovable";
   };
 
   const copyToClipboard = async (text: string) => {
@@ -53,6 +52,10 @@ const Index = () => {
   const joinMeeting = () => {
     if (!channelName) {
       toast.error("Please enter a meeting code");
+      return;
+    }
+    if (channelName !== "lovable") {
+      toast.error("Invalid meeting code. Please use 'lovable'");
       return;
     }
     setInCall(true);
