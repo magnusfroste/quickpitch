@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 
-const appId = "YOUR_AGORA_APP_ID"; // Replace with your Agora app ID
+const appId = f57cb5af386a4ea595ad9668d9b522ac
 
 const useClient = createClient({ codec: "vp8", mode: "rtc" });
 const useMicrophoneAndCameraTracks = createMicrophoneAndCameraTracks();
