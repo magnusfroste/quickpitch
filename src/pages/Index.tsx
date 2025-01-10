@@ -21,6 +21,13 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Extract meeting code from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const meetingCode = urlParams.get('meeting');
+    if (meetingCode) {
+      setChannelName(meetingCode);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
@@ -42,20 +49,26 @@ const Index = () => {
     return "lovable";
   };
 
+  const getMeetingUrl = () => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}?meeting=${channelName}`;
+  };
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("Meeting code copied to clipboard!");
+      toast.success("Meeting link copied to clipboard!");
     } catch (err) {
-      toast.error("Failed to copy meeting code");
+      toast.error("Failed to copy meeting link");
     }
   };
 
   const shareMeeting = async () => {
+    const meetingUrl = getMeetingUrl();
     const shareData = {
       title: "Join my video meeting",
-      text: `Join my video meeting with code: ${channelName}`,
-      url: window.location.href,
+      text: "Join my video meeting",
+      url: meetingUrl,
     };
 
     try {
@@ -65,7 +78,7 @@ const Index = () => {
         throw new Error("Web Share API not supported");
       }
     } catch (err) {
-      copyToClipboard(`Join my video meeting with code: ${channelName}`);
+      copyToClipboard(meetingUrl);
     }
   };
 
@@ -129,15 +142,17 @@ const Index = () => {
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Share Meeting Code</DialogTitle>
+                    <DialogTitle>Share Meeting Link</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-lg">
-                      <span className="flex-1 font-mono">{channelName}</span>
+                      <span className="flex-1 font-mono text-sm truncate">
+                        {getMeetingUrl()}
+                      </span>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => copyToClipboard(channelName)}
+                        onClick={() => copyToClipboard(getMeetingUrl())}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
