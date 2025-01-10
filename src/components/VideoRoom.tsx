@@ -4,16 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 
-// Make sure this App ID matches exactly with your Agora project
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
-// Temporary token - in production this should come from your token server
-const tempToken = "007eJxTYHgtMq9hd51lEd8zJolPF48+knvlsVo+/O3L2wfSRCp4jxQrMKSZmicnmSamGVuYJZqkJppamiamWJpZJlmaGSUmH+xvTG8IZGS480OHlZGBAkF8doac/LLEpJxUBgYAMNAi0w==";
+const tempToken = "007eJxTYHgtMq9hd51lEd8zJolPF48+knvlsVo+/O3L2wfSRCp4jxQrMKSZmicnmSamGVuYJZqkJppamiamWJpZJlmaGSUmH+xvTG8IZGS480OHlZGBAkF8Noac/LLEpJxUBgYAMNAi0w==";
 
-// Create an instance of the Agora client with specific configurations
 const client = AgoraRTC.createClient({ 
   mode: "rtc", 
   codec: "vp8",
-  role: "host" // Explicitly set role as host
+  role: "host"
 });
 
 interface VideoRoomProps {
@@ -33,19 +30,25 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
   useEffect(() => {
     // Handler for when a remote user publishes their stream
     const handleUserPublished = async (user: any, mediaType: any) => {
+      console.log("Remote user published:", user.uid, mediaType);
       await client.subscribe(user, mediaType);
+      console.log("Subscribed to remote user:", user.uid, mediaType);
+      
       if (mediaType === "video") {
         setUsers((prevUsers) => {
+          console.log("Adding user to video grid:", user.uid);
           return [...prevUsers, user];
         });
       }
       if (mediaType === "audio") {
+        console.log("Playing remote audio:", user.uid);
         user.audioTrack?.play();
       }
     };
 
     // Handler for when a remote user unpublishes their stream
     const handleUserUnpublished = (user: any, mediaType: any) => {
+      console.log("Remote user unpublished:", user.uid, mediaType);
       if (mediaType === "audio") {
         user.audioTrack?.stop();
       }
@@ -58,28 +61,34 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
 
     // Handler for when a remote user leaves
     const handleUserLeft = (user: any) => {
+      console.log("Remote user left:", user.uid);
       setUsers((prevUsers) => {
         return prevUsers.filter((User) => User.uid !== user.uid);
       });
     };
 
     let init = async (name: string) => {
+      console.log("Initializing Agora client...");
       client.on("user-published", handleUserPublished);
       client.on("user-unpublished", handleUserUnpublished);
       client.on("user-left", handleUserLeft);
 
       try {
-        // Request permissions before joining
+        console.log("Requesting media permissions...");
         await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        console.log("Media permissions granted");
         
-        // Join with token
-        await client.join(appId, name, tempToken, null);
+        console.log("Joining channel:", name);
+        const uid = await client.join(appId, name, tempToken, null);
+        console.log("Joined channel successfully. UID:", uid);
         
-        // Create tracks with specific configurations
+        console.log("Creating audio track...");
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
           encoderConfig: "music_standard"
         });
+        console.log("Audio track created");
         
+        console.log("Creating video track...");
         const videoTrack = await AgoraRTC.createCameraVideoTrack({
           encoderConfig: {
             width: 640,
@@ -89,18 +98,22 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
             bitrateMax: 1000,
           }
         });
+        console.log("Video track created");
 
+        console.log("Publishing tracks to channel...");
         await client.publish([audioTrack, videoTrack]);
+        console.log("Tracks published successfully");
         
-        // Play local video track immediately after creation
         if (videoTrack) {
+          console.log("Playing local video track");
           videoTrack.play("local-video");
         }
         
         setLocalTracks({ audioTrack, videoTrack });
         setStart(true);
+        console.log("Setup complete");
       } catch (error) {
-        console.error("Error initializing streams:", error);
+        console.error("Error during initialization:", error);
         if (error instanceof Error) {
           if (error.name === "NotAllowedError") {
             toast.error("Please allow camera and microphone access to join the meeting");
@@ -116,6 +129,7 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
     init(channelName);
 
     return () => {
+      console.log("Cleaning up...");
       if (localTracks.audioTrack) {
         localTracks.audioTrack.stop();
         localTracks.audioTrack.close();
@@ -128,8 +142,9 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
       client.off("user-unpublished", handleUserUnpublished);
       client.off("user-left", handleUserLeft);
       client.leave().catch((err) => {
-        console.log(err);
+        console.error("Error leaving channel:", err);
       });
+      console.log("Cleanup complete");
     };
   }, [channelName]);
 
