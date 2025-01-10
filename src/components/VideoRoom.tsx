@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
@@ -26,6 +26,7 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
     videoTrack: any;
   }>({ audioTrack: null, videoTrack: null });
   const [trackState, setTrackState] = useState({ video: true, audio: true });
+  const localPlayerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (channelName !== "lovable") {
@@ -99,7 +100,8 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
             frameRate: 30,
             bitrateMin: 400,
             bitrateMax: 1000,
-          }
+          },
+          optimizationMode: "detail"
         });
         console.log("Video track created");
 
@@ -107,19 +109,15 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
         await client.publish([audioTrack, videoTrack]);
         console.log("Tracks published successfully");
         
-        if (videoTrack) {
+        if (videoTrack && localPlayerRef.current) {
           console.log("Playing local video track");
-          // Create container if it doesn't exist
-          const localPlayerContainer = document.getElementById('local-player');
-          if (localPlayerContainer) {
-            // Clear any existing content
-            localPlayerContainer.innerHTML = '';
-            // Play the video track directly in the container
-            videoTrack.play('local-player', { fit: 'cover' });
-            console.log("Local video track playing in container");
-          } else {
-            console.error("Local player container not found");
-          }
+          // Clear any existing content and play
+          localPlayerRef.current.innerHTML = '';
+          videoTrack.play(localPlayerRef.current, { 
+            fit: "cover",
+            mirror: true 
+          });
+          console.log("Local video track playing in container");
         }
         
         setLocalTracks({ audioTrack, videoTrack });
@@ -160,6 +158,17 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
       console.log("Cleanup complete");
     };
   }, [channelName]);
+
+  // Effect to handle video track updates
+  useEffect(() => {
+    if (localTracks.videoTrack && localPlayerRef.current && start) {
+      localPlayerRef.current.innerHTML = '';
+      localTracks.videoTrack.play(localPlayerRef.current, { 
+        fit: "cover",
+        mirror: true 
+      });
+    }
+  }, [localTracks.videoTrack, start]);
 
   const mute = async (type: "audio" | "video") => {
     try {
@@ -210,7 +219,7 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
-              <div id="local-player" className="absolute inset-0 bg-gray-800"></div>
+              <div ref={localPlayerRef} className="absolute inset-0 bg-gray-800"></div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
               </div>
