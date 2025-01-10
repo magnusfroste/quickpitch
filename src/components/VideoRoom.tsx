@@ -68,10 +68,24 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
     };
 
     let init = async (name: string) => {
-      console.log("Initializing Agora client...");
+      console.log("Starting initialization with channel name:", name);
+      console.log("App ID:", appId);
+      console.log("Token:", tempToken ? "Token present" : "No token");
+      
       client.on("user-published", handleUserPublished);
       client.on("user-unpublished", handleUserUnpublished);
       client.on("user-left", handleUserLeft);
+      
+      // Add error event listener
+      client.on("error", (err) => {
+        console.error("Agora client error:", err);
+        toast.error(`Agora error: ${err.message}`);
+      });
+
+      // Add connection state change listener
+      client.on("connection-state-change", (curState, prevState) => {
+        console.log("Connection state changed from", prevState, "to", curState);
+      });
 
       try {
         console.log("Requesting media permissions...");
@@ -113,14 +127,19 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
         setStart(true);
         console.log("Setup complete");
       } catch (error) {
-        console.error("Error during initialization:", error);
+        console.error("Detailed error during initialization:", error);
         if (error instanceof Error) {
+          console.log("Error name:", error.name);
+          console.log("Error message:", error.message);
+          console.log("Error stack:", error.stack);
+          
           if (error.name === "NotAllowedError") {
             toast.error("Please allow camera and microphone access to join the meeting");
           } else {
             toast.error("Failed to join the meeting: " + error.message);
           }
         } else {
+          console.log("Non-Error object thrown:", error);
           toast.error("Failed to join the meeting");
         }
       }
