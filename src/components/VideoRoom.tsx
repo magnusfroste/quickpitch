@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { createClient, createMicrophoneAndCameraTracks } from "agora-rtc-react";
+import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+import { AgoraVideoPlayer, createClient, createMicrophoneAndCameraTracks, IMicrophoneAndCameraTracks } from "agora-rtc-react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 
 const appId = "YOUR_AGORA_APP_ID"; // Replace with your Agora app ID
 
-const useClient = createClient({ mode: "rtc", codec: "vp8" });
+const useClient = createClient({ codec: "vp8", mode: "rtc" });
 const useMicrophoneAndCameraTracks = createMicrophoneAndCameraTracks();
 
 interface VideoRoomProps {
@@ -108,12 +109,9 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
           {start && tracks && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg">
               <div className="absolute inset-0">
-                <video
+                <AgoraVideoPlayer
+                  videoTrack={tracks[1]}
                   className="w-full h-full object-cover"
-                  ref={(ref) => {
-                    if (ref) ref.srcObject = tracks[1].mediaStream;
-                  }}
-                  autoPlay
                 />
               </div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
@@ -130,12 +128,9 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
                     className="relative bg-white rounded-2xl overflow-hidden shadow-lg"
                   >
                     <div className="absolute inset-0">
-                      <video
+                      <AgoraVideoPlayer
+                        videoTrack={user.videoTrack}
                         className="w-full h-full object-cover"
-                        ref={(ref) => {
-                          if (ref) ref.srcObject = user.videoTrack.mediaStream;
-                        }}
-                        autoPlay
                       />
                     </div>
                     <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
