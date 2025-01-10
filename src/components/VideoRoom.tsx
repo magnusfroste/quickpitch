@@ -5,6 +5,8 @@ import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
+// Temporary token - in production this should come from your token server
+const tempToken = "007eJxTYPjf+Pjk5LmzDm5YsOLb5OPsDxbN2XL4wMGHR+6e+Xh5/tQzCgwWFhYmKUaGpqYpxqapyWmWJiYWFpYWxpZJJomWxqaJ+xekpDYEMjLsP76egZEBAkF8FoaS1OISBgYA9FEhAg==";
 
 // Create an instance of the Agora client
 const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
@@ -65,7 +67,8 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
         // Request permissions before joining
         await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         
-        await client.join(appId, name, null, null);
+        // Join with token
+        await client.join(appId, name, tempToken, null);
         
         // Create tracks with specific configurations
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
