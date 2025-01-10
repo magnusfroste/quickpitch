@@ -9,11 +9,13 @@ interface VideoRoomProps {
 
 const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
   const appId = "f57cb5af386a4ea595ad9668d9b522ac";
+  // Using a temporary token for the "lovable" channel
+  const token = "007eJxTYPjzMuGQ5pGZvxgWKt1/9/vBm4eP5+1YLLbmxMGtR7Yd+2GroMCQbGFpYWJqYZyUZGFhYZqcZGxpaWaQmGRgYWGWmGz6+ldKQyAjw+1tP5kYGSAQxGdhKEktLmFgAACumB+U";
   
   const rtcProps = {
     appId: appId,
     channel: channelName,
-    token: null, // Setting token to null since we're using App ID Authentication
+    token: token, // Using the temporary token
     enableScreensharing: true,
   };
 
