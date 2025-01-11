@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
 
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
-const tempToken = "007eJxTYNh1qWMKg0Qqx3vDkDeva7mnJKUYzdp3c4KGauc1jUYe5VgFhjRT8+Qk08Q0YwuzRJPURFNL08QUSzMzixTLJFMjo8Rkk0mN6Q2BjAyLDG+yMjJAIIjPzpCTX5aYlJPKwAAAVwcfkg==";
 
 const client = AgoraRTC.createClient({ 
   mode: "rtc", 
@@ -109,15 +108,69 @@ const VideoRoom = () => {
         });
     };
 
+    const getAgoraToken = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-agora-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ channelName }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get Agora token');
+        }
+
+        const { token, uid } = await response.json();
+        return { token, uid };
+      } catch (error) {
+        console.error('Error getting Agora token:', error);
+        throw error;
+      }
+    };
+
     const initializeAgora = async () => {
       try {
+        const { token, uid } = await getAgoraToken();
+        
         client.on("user-published", handleUserPublished);
         client.on("user-unpublished", handleUserUnpublished);
         client.on("user-left", handleUserLeft);
-        await init(channelName);
+        
+        await client.join(appId, channelName, token, uid);
+        
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          encoderConfig: "music_standard"
+        });
+        
+        const videoTrack = await AgoraRTC.createCameraVideoTrack({
+          encoderConfig: {
+            width: 640,
+            height: 480,
+            frameRate: 30,
+            bitrateMin: 400,
+            bitrateMax: 1000,
+          },
+          optimizationMode: "detail"
+        });
+
+        await client.publish([audioTrack, videoTrack]);
+
+        setLocalTracks({ audioTrack, videoTrack });
+        setStart(true);
       } catch (error) {
-        console.error("Error initializing Agora:", error);
-        toast.error("Failed to initialize video conference");
+        console.error("Error during initialization:", error);
+        if (error instanceof Error) {
+          if (error.name === "NotAllowedError") {
+            toast.error("Please allow camera and microphone access to join the meeting");
+          } else {
+            toast.error("Failed to join the meeting: " + error.message);
+          }
+        } else {
+          toast.error("Failed to join the meeting");
+        }
         navigate('/dashboard');
       }
     };
