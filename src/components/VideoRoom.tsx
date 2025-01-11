@@ -412,6 +412,14 @@ const VideoRoom = () => {
     }
   };
 
+  const shouldShowPresentation = () => {
+    return isPresentationMode || (sharedState.isPresentationMode && currentUserId !== sharedState.presenterUserId);
+  };
+
+  useEffect(() => {
+    fetchPresentationImages();
+  }, []);
+
   if (isLoading) {
     return (
       <div className="h-screen bg-apple-gray flex items-center justify-center">
@@ -466,12 +474,12 @@ const VideoRoom = () => {
           ))}
         </div>
 
-        {sharedState.isPresentationMode && presentationImages.length > 0 && (
+        {shouldShowPresentation() && presentationImages.length > 0 && (
           <div className="mb-4 bg-white rounded-xl p-4 shadow-sm">
             <div className="relative">
               <img
-                src={presentationImages[sharedState.currentImageIndex]?.image_url}
-                alt={`Presentation image ${sharedState.currentImageIndex + 1}`}
+                src={presentationImages[currentImageIndex]?.image_url}
+                alt={`Presentation image ${currentImageIndex + 1}`}
                 className="w-full h-[400px] object-contain rounded-lg"
               />
               {presentationImages.length > 1 && currentUserId === sharedState.presenterUserId && (
@@ -481,7 +489,7 @@ const VideoRoom = () => {
                     size="icon"
                     className="rounded-full bg-white/80 hover:bg-white"
                     onClick={previousImage}
-                    disabled={sharedState.currentImageIndex === 0}
+                    disabled={currentImageIndex === 0}
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
@@ -490,14 +498,14 @@ const VideoRoom = () => {
                     size="icon"
                     className="rounded-full bg-white/80 hover:bg-white"
                     onClick={nextImage}
-                    disabled={sharedState.currentImageIndex === presentationImages.length - 1}
+                    disabled={currentImageIndex === presentationImages.length - 1}
                   >
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
               )}
               <div className="absolute bottom-4 right-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
-                {sharedState.currentImageIndex + 1} / {presentationImages.length}
+                {currentImageIndex + 1} / {presentationImages.length}
               </div>
             </div>
           </div>
