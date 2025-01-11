@@ -30,6 +30,14 @@ const VideoRoom = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const localPlayerRef = useRef<HTMLDivElement>(null);
   const presenceChannel = useRef<any>(null);
+  const [sharedState, setSharedState] = useState<{
+    isPresentationMode: boolean;
+    currentImageIndex: number;
+    presenterUserId?: string;
+  }>({
+    isPresentationMode: false,
+    currentImageIndex: 0
+  });
 
   useEffect(() => {
     if (!channelName) {
@@ -52,23 +60,33 @@ const VideoRoom = () => {
       presenceChannel.current
         .on('presence', { event: 'sync' }, () => {
           const state = presenceChannel.current.presenceState();
+          console.log("Presence state updated:", state);
+          
           const presenterState = Object.values(state).find((presences: any) => 
             presences.some((presence: any) => presence.isPresentationMode)
           );
           
           if (presenterState) {
             const presenter = presenterState[0];
-            setIsPresentationMode(true);
-            setCurrentImageIndex(presenter.currentImageIndex || 0);
+            setSharedState({
+              isPresentationMode: true,
+              currentImageIndex: presenter.currentImageIndex || 0,
+              presenterUserId: presenter.userId
+            });
           } else {
-            setIsPresentationMode(false);
+            setSharedState({
+              isPresentationMode: false,
+              currentImageIndex: 0
+            });
           }
         })
         .subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
+            const { data: { user } } = await supabase.auth.getUser();
             await presenceChannel.current.track({
               isPresentationMode: false,
-              currentImageIndex: 0
+              currentImageIndex: 0,
+              userId: user?.id
             });
           }
         });
@@ -115,7 +133,6 @@ const VideoRoom = () => {
     };
   }, [channelName]);
 
-  // Effect to handle video track updates
   useEffect(() => {
     if (localTracks.videoTrack && localPlayerRef.current && start) {
       console.log("Updating video display");
@@ -277,36 +294,44 @@ const VideoRoom = () => {
   };
 
   const togglePresentation = async () => {
-    const newPresentationMode = !isPresentationMode;
-    setIsPresentationMode(newPresentationMode);
-    setCurrentImageIndex(0);
+    const { data: { user } } = await supabase.auth.getUser();
+    const newPresentationMode = !sharedState.isPresentationMode;
     
     if (presenceChannel.current) {
       await presenceChannel.current.track({
         isPresentationMode: newPresentationMode,
-        currentImageIndex: 0
+        currentImageIndex: 0,
+        userId: user?.id
       });
     }
     
     toast.success(newPresentationMode ? 'Presentation started' : 'Presentation ended');
   };
 
-  const nextImage = () => {
-    if (currentImageIndex < presentationImages.length - 1) {
-      setCurrentImageIndex(prev => prev + 1);
+  const nextImage = async () => {
+    if (sharedState.currentImageIndex < presentationImages.length - 1) {
+      const newIndex = sharedState.currentImageIndex + 1;
+      setCurrentImageIndex(newIndex);
+      
+      const { data: { user } } = await supabase.auth.getUser();
       presenceChannel.current?.track({
         isPresentationMode: true,
-        currentImageIndex: currentImageIndex + 1
+        currentImageIndex: newIndex,
+        userId: user?.id
       });
     }
   };
 
-  const previousImage = () => {
-    if (currentImageIndex > 0) {
-      setCurrentImageIndex(prev => prev - 1);
+  const previousImage = async () => {
+    if (sharedState.currentImageIndex > 0) {
+      const newIndex = sharedState.currentImageIndex - 1;
+      setCurrentImageIndex(newIndex);
+      
+      const { data: { user } } = await supabase.auth.getUser();
       presenceChannel.current?.track({
         isPresentationMode: true,
-        currentImageIndex: currentImageIndex - 1
+        currentImageIndex: newIndex,
+        userId: user?.id
       });
     }
   };
@@ -345,23 +370,26 @@ const VideoRoom = () => {
         </div>
 
         {/* Presentation Image Section */}
-        {isPresentationMode && presentationImages.length > 0 && (
+        {sharedState.isPresentationMode && presentationImages.length > 0 && (
           <div className="mb-4 bg-white rounded-xl p-4 shadow-sm">
             <div className="relative">
               <img
-                src={presentationImages[currentImageIndex]?.image_url}
-                alt={`Presentation image ${currentImageIndex + 1}`}
+                src={presentationImages[sharedState.currentImageIndex]?.image_url}
+                alt={`Presentation image ${sharedState.currentImageIndex + 1}`}
                 className="w-full h-[400px] object-contain rounded-lg"
               />
               {/* Navigation buttons only visible to presenter */}
-              {presentationImages.length > 1 && (
+              {presentationImages.length > 1 && sharedState.presenterUserId === (async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                return user?.id;
+              })() && (
                 <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-4">
                   <Button
                     variant="outline"
                     size="icon"
                     className="rounded-full bg-white/80 hover:bg-white"
                     onClick={previousImage}
-                    disabled={currentImageIndex === 0}
+                    disabled={sharedState.currentImageIndex === 0}
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
@@ -370,14 +398,14 @@ const VideoRoom = () => {
                     size="icon"
                     className="rounded-full bg-white/80 hover:bg-white"
                     onClick={nextImage}
-                    disabled={currentImageIndex === presentationImages.length - 1}
+                    disabled={sharedState.currentImageIndex === presentationImages.length - 1}
                   >
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
               )}
               <div className="absolute bottom-4 right-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
-                {currentImageIndex + 1} / {presentationImages.length}
+                {sharedState.currentImageIndex + 1} / {presentationImages.length}
               </div>
             </div>
           </div>
@@ -414,7 +442,7 @@ const VideoRoom = () => {
             className="rounded-full w-12 h-12 bg-white"
             onClick={togglePresentation}
           >
-            <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
+            <Presentation className={`h-5 w-5 ${sharedState.isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
           </Button>
           <Button
             variant="destructive"
