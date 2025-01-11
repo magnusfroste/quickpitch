@@ -30,7 +30,6 @@ const VideoRoom = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const localPlayerRef = useRef<HTMLDivElement>(null);
   const presenceChannel = useRef<any>(null);
-  const initializingRef = useRef(false);
   const [sharedState, setSharedState] = useState<{
     isPresentationMode: boolean;
     currentImageIndex: number;
@@ -114,6 +113,18 @@ const VideoRoom = () => {
 
     const cleanup = async () => {
       console.log("Cleaning up...");
+      
+      // Clean up Agora client first
+      client.removeAllListeners();
+      if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
+        try {
+          await client.leave();
+        } catch (err) {
+          console.error("Error during client leave:", err);
+        }
+      }
+      
+      // Then clean up local tracks
       if (localTracks.audioTrack) {
         localTracks.audioTrack.stop();
         localTracks.audioTrack.close();
@@ -123,36 +134,86 @@ const VideoRoom = () => {
         localTracks.videoTrack.close();
       }
       
-      // Reset local tracks state
+      // Reset states
       setLocalTracks({ audioTrack: null, videoTrack: null });
       setStart(false);
+      setUsers([]);
       
-      // Clean up Agora client
-      client.removeAllListeners();
-      try {
-        if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
-          await client.leave();
-        }
-      } catch (err) {
-        console.error("Error during cleanup:", err);
-      }
-      
-      // Clean up Supabase
+      // Clean up Supabase presence
       if (presenceChannel.current) {
-        await presenceChannel.current.untrack();
-        await supabase.removeChannel(presenceChannel.current);
+        try {
+          await presenceChannel.current.untrack();
+          await supabase.removeChannel(presenceChannel.current);
+        } catch (err) {
+          console.error("Error during presence cleanup:", err);
+        }
+      }
+    };
+
+    const init = async (name: string) => {
+      console.log("Requesting media permissions...");
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        console.log("Media permissions granted");
+        
+        console.log("Joining channel:", name);
+        const uid = await client.join(appId, name, tempToken, null);
+        console.log("Joined channel successfully. UID:", uid);
+        
+        console.log("Creating audio track...");
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          encoderConfig: "music_standard"
+        });
+        console.log("Audio track created");
+        
+        console.log("Creating video track...");
+        const videoTrack = await AgoraRTC.createCameraVideoTrack({
+          encoderConfig: {
+            width: 640,
+            height: 480,
+            frameRate: 30,
+            bitrateMin: 400,
+            bitrateMax: 1000,
+          },
+          optimizationMode: "detail"
+        });
+        console.log("Video track created");
+
+        if (videoTrack && localPlayerRef.current) {
+          videoTrack.play(localPlayerRef.current);
+        }
+
+        console.log("Publishing tracks to channel...");
+        await client.publish([audioTrack, videoTrack]);
+        console.log("Tracks published successfully");
+
+        setLocalTracks({ audioTrack, videoTrack });
+        setStart(true);
+        
+        console.log("Setup complete");
+      } catch (error) {
+        console.error("Error during initialization:", error);
+        if (error instanceof Error) {
+          if (error.name === "NotAllowedError") {
+            toast.error("Please allow camera and microphone access to join the meeting");
+          } else {
+            toast.error("Failed to join the meeting: " + error.message);
+          }
+        } else {
+          toast.error("Failed to join the meeting");
+        }
+        if (isHost) {
+          navigate('/dashboard');
+        }
+        throw error;
       }
     };
 
     const initializeAgora = async () => {
-      if (initializingRef.current) return;
-      initializingRef.current = true;
-
       try {
         console.log("Initializing Agora client...");
-        await cleanup();
         
-        // Add event listeners
+        // Set up event listeners
         client.on("user-published", handleUserPublished);
         client.on("user-unpublished", handleUserUnpublished);
         client.on("user-left", handleUserLeft);
@@ -165,14 +226,14 @@ const VideoRoom = () => {
         if (isHost) {
           navigate('/dashboard');
         }
-      } finally {
-        initializingRef.current = false;
       }
     };
 
+    // Start initialization
     initializePresenceChannel();
     initializeAgora();
 
+    // Cleanup on unmount
     return () => {
       cleanup();
     };
@@ -214,65 +275,6 @@ const VideoRoom = () => {
     });
   };
 
-  const init = async (name: string) => {
-    console.log("Requesting media permissions...");
-    try {
-      await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      console.log("Media permissions granted");
-      
-      console.log("Joining channel:", name);
-      const uid = await client.join(appId, name, tempToken, null);
-      console.log("Joined channel successfully. UID:", uid);
-      
-      console.log("Creating audio track...");
-      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
-        encoderConfig: "music_standard"
-      });
-      console.log("Audio track created");
-      
-      console.log("Creating video track...");
-      const videoTrack = await AgoraRTC.createCameraVideoTrack({
-        encoderConfig: {
-          width: 640,
-          height: 480,
-          frameRate: 30,
-          bitrateMin: 400,
-          bitrateMax: 1000,
-        },
-        optimizationMode: "detail"
-      });
-      console.log("Video track created");
-
-      if (videoTrack && localPlayerRef.current) {
-        videoTrack.play(localPlayerRef.current);
-      }
-
-      console.log("Publishing tracks to channel...");
-      await client.publish([audioTrack, videoTrack]);
-      console.log("Tracks published successfully");
-
-      setLocalTracks({ audioTrack, videoTrack });
-      setStart(true);
-      
-      console.log("Setup complete");
-    } catch (error) {
-      console.error("Error during initialization:", error);
-      if (error instanceof Error) {
-        if (error.name === "NotAllowedError") {
-          toast.error("Please allow camera and microphone access to join the meeting");
-        } else {
-          toast.error("Failed to join the meeting: " + error.message);
-        }
-      } else {
-        toast.error("Failed to join the meeting");
-      }
-      if (isHost) {
-        navigate('/dashboard');
-      }
-      throw error;
-    }
-  };
-
   const mute = async (type: "audio" | "video") => {
     try {
       if (type === "audio") {
@@ -303,17 +305,8 @@ const VideoRoom = () => {
   };
 
   const leaveChannel = async () => {
-    if (localTracks.audioTrack) {
-      localTracks.audioTrack.stop();
-      localTracks.audioTrack.close();
-    }
-    if (localTracks.videoTrack) {
-      localTracks.videoTrack.stop();
-      localTracks.videoTrack.close();
-    }
-    await client.leave();
-    setStart(false);
-    navigate('/dashboard'); // Changed from '/' to '/dashboard'
+    await cleanup();
+    navigate('/dashboard');
   };
 
   const togglePresentation = async () => {
