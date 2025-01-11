@@ -199,11 +199,15 @@ const VideoRoom = () => {
           optimizationMode: "detail"
         });
 
+        // Wait for the ref to be available
         if (localPlayerRef.current) {
           videoTrack.play(localPlayerRef.current);
+        } else {
+          console.error("Local player ref not available");
         }
 
         await client.publish([audioTrack, videoTrack]);
+        console.log("Local tracks published successfully");
 
         setLocalTracks({ audioTrack, videoTrack });
         setStart(true);
@@ -489,7 +493,7 @@ const VideoRoom = () => {
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
-              <div ref={localPlayerRef} className="absolute inset-0"></div>
+              <div ref={localPlayerRef} className="absolute inset-0 bg-black"></div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
               </div>
