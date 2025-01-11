@@ -383,13 +383,6 @@ const VideoRoom = () => {
   return (
     <div className="h-screen bg-apple-gray p-4">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
-        {/* Debug information */}
-        <div className="bg-black/10 p-2 mb-4 rounded text-sm">
-          <p className="text-blue-600">Presentation Mode: {sharedState.isPresentationMode ? 'Active' : 'Inactive'}</p>
-          <p className="text-green-600">Current Image Index: {sharedState.currentImageIndex}</p>
-          <p className="text-purple-600">Presenter ID: {sharedState.presenterUserId || 'None'}</p>
-        </div>
-
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
