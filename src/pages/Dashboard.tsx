@@ -32,8 +32,8 @@ const Dashboard = () => {
   };
 
   const getMeetingUrl = () => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/meeting/${channelName}`;
+    // Use window.location.origin to get the base URL in both development and production
+    return `${window.location.origin}/meeting/${channelName}`;
   };
 
   const copyToClipboard = async () => {
@@ -49,7 +49,8 @@ const Dashboard = () => {
 
   const joinMeeting = () => {
     if (!validateChannelName()) return;
-    navigate(`/meeting/${channelName}`);
+    // Use absolute path for navigation
+    navigate(`/meeting/${channelName}`, { replace: true });
   };
 
   const handleSignOut = async () => {
