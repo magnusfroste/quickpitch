@@ -7,7 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
 import { MeetingTimer } from "./MeetingTimer";
 
-const appId = "f57cb5af386a4ea595ad9668d9b522ac";
+// Remove hardcoded app ID and use environment variable
+const appId = import.meta.env.VITE_AGORA_APP_ID;
 
 const client = AgoraRTC.createClient({ 
   mode: "rtc", 
