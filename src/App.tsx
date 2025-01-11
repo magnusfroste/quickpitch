@@ -1,23 +1,30 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster } from "@/components/ui/sonner";
-import Index from "@/pages/Index";
-import Dashboard from "@/pages/Dashboard";
-import Login from "@/pages/Login";
-import Settings from "@/pages/Settings";
-import "./App.css";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import VideoRoom from "./components/VideoRoom";
 
-function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
       <Toaster />
-    </Router>
-  );
-}
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/meeting/:channelName" element={<VideoRoom />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;

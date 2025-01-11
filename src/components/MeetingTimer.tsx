@@ -34,7 +34,7 @@ export const MeetingTimer = ({ startTime, onTimeUp }: MeetingTimerProps) => {
 
   const getTimerColor = () => {
     if (timeLeft <= 60) return "destructive"; // Last minute
-    if (timeLeft <= 300) return "secondary"; // Last 5 minutes
+    if (timeLeft <= 300) return "warning"; // Last 5 minutes
     return "secondary";
   };
 

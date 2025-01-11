@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ImageUploader } from "@/components/ImageUploader";
 import { ImageGrid } from "@/components/ImageGrid";
-import { Copy, Video, Settings, LogOut } from "lucide-react";
+import { Copy, Share2, Video, Settings, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +44,27 @@ const Dashboard = () => {
       toast.success("Meeting link copied to clipboard!");
     } catch (err) {
       toast.error("Failed to copy meeting link");
+    }
+  };
+
+  const shareMeeting = async () => {
+    if (!validateChannelName()) return;
+
+    const meetingUrl = getMeetingUrl();
+    const shareData = {
+      title: "Join my video meeting",
+      text: "Join my video meeting",
+      url: meetingUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        throw new Error("Web Share API not supported");
+      }
+    } catch (err) {
+      copyToClipboard();
     }
   };
 
@@ -122,6 +143,14 @@ const Dashboard = () => {
                 >
                   <Copy className="h-4 w-4" />
                   Copy Link
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={shareMeeting}
+                  className="flex items-center gap-2"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share
                 </Button>
               </div>
             </div>

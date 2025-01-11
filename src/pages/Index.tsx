@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Video, Users, Shield, Timer } from "lucide-react";
+import { LogOut, Video, Users, Shield } from "lucide-react";
 
 const Index = () => {
   const [channelName, setChannelName] = useState("");
@@ -48,6 +48,7 @@ const Index = () => {
       toast.error("Please enter a meeting code");
       return;
     }
+    // Remove the validation that restricts to "lovable"
     navigate(`/meeting/${channelName}`);
   };
 
@@ -56,7 +57,7 @@ const Index = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900">
-            QuickPitch
+            Confablink
           </h1>
           {user && (
             <Button
@@ -73,10 +74,10 @@ const Index = () => {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <h2 className="text-5xl font-bold text-gray-900 leading-tight">
-              Your pitch. 5 slides.<br />20 minutes. Done.
+              Connect with anyone, anywhere, instantly
             </h2>
             <p className="text-xl text-gray-600">
-              Get straight to the point with our time-boxed format. Show respect for your prospect's time, and they'll respect your pitch.
+              Start or join a secure video meeting with crystal-clear quality and easy-to-use features.
             </p>
             <div className="space-y-4">
               <Input
@@ -91,14 +92,14 @@ const Index = () => {
                   onClick={joinMeeting}
                   className="flex-1 h-12 text-lg bg-blue-600 hover:bg-blue-700"
                 >
-                  Join Pitch
+                  Join Meeting
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleHostMeeting}
                   className="flex-1 h-12 text-lg"
                 >
-                  Start Pitching
+                  Host Meeting
                 </Button>
               </div>
             </div>
@@ -107,9 +108,9 @@ const Index = () => {
           <div className="hidden md:block">
             <div className="bg-white p-8 rounded-2xl shadow-xl">
               <img
-                src="/lovable-uploads/3d4e34ae-2efd-4022-b75f-2d517aca07e8.png"
-                alt="Person using QuickPitch on a tablet"
-                className="w-full h-auto rounded-lg"
+                src="/placeholder.svg"
+                alt="Video meeting illustration"
+                className="w-full h-auto"
               />
             </div>
           </div>
@@ -121,24 +122,24 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-blue-50 p-6 rounded-xl">
-              <Timer className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">20-Minute Timer</h3>
+              <Video className="h-12 w-12 text-blue-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">HD Video Calls</h3>
               <p className="text-gray-600">
-                Time is money. We'll keep you on track with our built-in timer.
+                Crystal clear video quality for seamless communication.
               </p>
             </div>
             <div className="bg-blue-50 p-6 rounded-xl">
-              <Video className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">5-Slide Limit</h3>
+              <Users className="h-12 w-12 text-blue-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Group Meetings</h3>
               <p className="text-gray-600">
-                Keep your pitch focused and respect everyone's time.
+                Connect with multiple participants in one session.
               </p>
             </div>
             <div className="bg-blue-50 p-6 rounded-xl">
               <Shield className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Secure Sharing</h3>
+              <h3 className="text-xl font-semibold mb-2">Secure Calls</h3>
               <p className="text-gray-600">
-                Share your pitch with confidence using encryption in transit.
+                End-to-end encryption for your privacy and security.
               </p>
             </div>
           </div>
