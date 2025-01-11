@@ -92,14 +92,14 @@ const Index = () => {
                   onClick={joinMeeting}
                   className="flex-1 h-12 text-lg bg-blue-600 hover:bg-blue-700"
                 >
-                  Join Meeting
+                  Join Pitch
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleHostMeeting}
                   className="flex-1 h-12 text-lg"
                 >
-                  Host Meeting
+                  Start Pitching
                 </Button>
               </div>
             </div>
@@ -123,23 +123,23 @@ const Index = () => {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-blue-50 p-6 rounded-xl">
               <Video className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">HD Video Calls</h3>
+              <h3 className="text-xl font-semibold mb-2">5-Slide Limit</h3>
               <p className="text-gray-600">
-                Crystal clear video quality for seamless communication.
+                Keep your pitch focused and respect everyone's time.
               </p>
             </div>
             <div className="bg-blue-50 p-6 rounded-xl">
               <Users className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Group Meetings</h3>
+              <h3 className="text-xl font-semibold mb-2">Clear Value Props</h3>
               <p className="text-gray-600">
-                Connect with multiple participants in one session.
+                Get your key points across effectively and efficiently.
               </p>
             </div>
             <div className="bg-blue-50 p-6 rounded-xl">
               <Shield className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Secure Calls</h3>
+              <h3 className="text-xl font-semibold mb-2">Secure Sharing</h3>
               <p className="text-gray-600">
-                Encryption in transit for your privacy and security.
+                Share your pitch with confidence using encryption in transit.
               </p>
             </div>
           </div>
