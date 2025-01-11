@@ -5,7 +5,6 @@ import { Mic, MicOff, Video, VideoOff, PhoneOff, Presentation, ChevronLeft, Chev
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
-import { MeetingTimer } from "./MeetingTimer";
 
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
 
@@ -20,12 +19,10 @@ const VideoRoom = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [start, setStart] = useState<boolean>(false);
-  const [meetingStartTime, setMeetingStartTime] = useState<number>(0);
   const [localTracks, setLocalTracks] = useState<{
     audioTrack: any;
     videoTrack: any;
   }>({ audioTrack: null, videoTrack: null });
-  
   const [trackState, setTrackState] = useState({ video: true, audio: true });
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   const [presentationImages, setPresentationImages] = useState<any[]>([]);
@@ -42,6 +39,15 @@ const VideoRoom = () => {
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
+
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+      setIsHost(!!user?.id);
+    };
+    getCurrentUser();
+  }, []);
 
   useEffect(() => {
     if (!channelName) {
@@ -149,7 +155,6 @@ const VideoRoom = () => {
 
         setLocalTracks({ audioTrack, videoTrack });
         setStart(true);
-        setMeetingStartTime(Date.now());
       } catch (error) {
         console.error("Error during initialization:", error);
         if (error instanceof Error) {
@@ -189,11 +194,6 @@ const VideoRoom = () => {
       }
     };
   }, [channelName]);
-
-  const handleTimeUp = () => {
-    toast.warning("Meeting time limit reached (20 minutes)");
-    leaveChannel();
-  };
 
   useEffect(() => {
     if (localTracks.videoTrack && localPlayerRef.current && start) {
@@ -433,16 +433,6 @@ const VideoRoom = () => {
   return (
     <div className="h-screen bg-apple-gray p-4">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-700">Meeting Room: {channelName}</h2>
-          {start && meetingStartTime > 0 && (
-            <MeetingTimer 
-              startTime={meetingStartTime} 
-              onTimeUp={handleTimeUp}
-            />
-          )}
-        </div>
-        
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
