@@ -199,16 +199,10 @@ const VideoRoom = () => {
           optimizationMode: "detail"
         });
 
-        // Wait for the ref to be available
-        if (localPlayerRef.current) {
-          videoTrack.play(localPlayerRef.current);
-        } else {
-          console.error("Local player ref not available");
-        }
-
         await client.publish([audioTrack, videoTrack]);
         console.log("Local tracks published successfully");
 
+        // Set tracks first so the ref update trigger will have access to videoTrack
         setLocalTracks({ audioTrack, videoTrack });
         setStart(true);
         setMeetingStartTime(Date.now());
@@ -267,6 +261,13 @@ const VideoRoom = () => {
       });
     };
   }, [channelName, isLoading, isInitialized, navigate]);
+
+  // Add new effect to handle video playback when ref is ready
+  useEffect(() => {
+    if (localPlayerRef.current && localTracks.videoTrack) {
+      localTracks.videoTrack.play(localPlayerRef.current);
+    }
+  }, [localPlayerRef.current, localTracks.videoTrack]);
 
   const handleUserPublished = async (user: any, mediaType: any) => {
     console.log("Remote user published:", user.uid, mediaType);
