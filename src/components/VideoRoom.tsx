@@ -60,7 +60,8 @@ const VideoRoom = () => {
     const initializePresenceChannel = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      presenceChannel.current = supabase.channel(`room:${channelName}`, {
+      const channelId = `room:${channelName}`;
+      presenceChannel.current = supabase.channel(channelId, {
         config: {
           presence: {
             key: user?.id,
@@ -79,10 +80,6 @@ const VideoRoom = () => {
           
           if (presenterState) {
             const presenter = presenterState[0];
-            console.log("Found presenter:", presenter);
-            console.log("Setting presentation mode to:", presenter.isPresentationMode);
-            console.log("Setting current image index to:", presenter.currentImageIndex);
-            
             setSharedState({
               isPresentationMode: presenter.isPresentationMode,
               currentImageIndex: presenter.currentImageIndex,
@@ -91,7 +88,6 @@ const VideoRoom = () => {
             setIsPresentationMode(presenter.isPresentationMode);
             setCurrentImageIndex(presenter.currentImageIndex);
           } else {
-            console.log("No presenter found, resetting presentation state");
             setSharedState({
               isPresentationMode: false,
               currentImageIndex: 0,
@@ -103,7 +99,6 @@ const VideoRoom = () => {
         })
         .subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
-            console.log("Successfully subscribed to presence channel");
             const { data: { user } } = await supabase.auth.getUser();
             await presenceChannel.current.track({
               isPresentationMode: false,
@@ -116,7 +111,6 @@ const VideoRoom = () => {
 
     const initializeAgora = async () => {
       try {
-        console.log("Initializing Agora client...");
         client.on("user-published", handleUserPublished);
         client.on("user-unpublished", handleUserUnpublished);
         client.on("user-left", handleUserLeft);
@@ -132,7 +126,6 @@ const VideoRoom = () => {
     initializeAgora();
 
     return () => {
-      console.log("Cleaning up...");
       if (localTracks.audioTrack) {
         localTracks.audioTrack.stop();
         localTracks.audioTrack.close();
@@ -151,7 +144,6 @@ const VideoRoom = () => {
         presenceChannel.current.untrack();
         supabase.removeChannel(presenceChannel.current);
       }
-      console.log("Cleanup complete");
     };
   }, [channelName]);
 
@@ -413,7 +405,6 @@ const VideoRoom = () => {
             })}
         </div>
 
-        {/* Presentation Image Section */}
         {sharedState.isPresentationMode && presentationImages.length > 0 && (
           <div className="mb-4 bg-white rounded-xl p-4 shadow-sm">
             <div className="relative">
@@ -422,7 +413,6 @@ const VideoRoom = () => {
                 alt={`Presentation image ${sharedState.currentImageIndex + 1}`}
                 className="w-full h-[400px] object-contain rounded-lg"
               />
-              {/* Navigation buttons only visible to presenter */}
               {presentationImages.length > 1 && currentUserId === sharedState.presenterUserId && (
                 <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-4">
                   <Button
@@ -477,7 +467,6 @@ const VideoRoom = () => {
               <VideoOff className="h-5 w-5 text-red-500" />
             )}
           </Button>
-          {/* Only show presentation button for authenticated host */}
           {isHost && (
             <Button
               variant="outline"
