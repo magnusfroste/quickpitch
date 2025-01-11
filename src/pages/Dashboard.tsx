@@ -23,12 +23,22 @@ const Dashboard = () => {
   const [isHost] = useState(true);
   const [channelName, setChannelName] = useState("");
 
+  const validateChannelName = () => {
+    if (!channelName.trim()) {
+      toast.error("Please enter a channel name");
+      return false;
+    }
+    return true;
+  };
+
   const getMeetingUrl = () => {
     const baseUrl = window.location.origin;
     return `${baseUrl}/meeting/${channelName}`;
   };
 
   const copyToClipboard = async () => {
+    if (!validateChannelName()) return;
+    
     try {
       await navigator.clipboard.writeText(getMeetingUrl());
       toast.success("Meeting link copied to clipboard!");
@@ -38,6 +48,8 @@ const Dashboard = () => {
   };
 
   const shareMeeting = async () => {
+    if (!validateChannelName()) return;
+
     const meetingUrl = getMeetingUrl();
     const shareData = {
       title: "Join my video meeting",
@@ -57,6 +69,7 @@ const Dashboard = () => {
   };
 
   const joinMeeting = () => {
+    if (!validateChannelName()) return;
     navigate(`/meeting/${channelName}`);
   };
 
@@ -111,6 +124,7 @@ const Dashboard = () => {
                   onChange={(e) => setChannelName(e.target.value)}
                   placeholder="Enter channel name"
                   className="max-w-md"
+                  required
                 />
               </div>
 
