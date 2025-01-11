@@ -25,7 +25,7 @@ const Dashboard = () => {
 
   const getMeetingUrl = () => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}?meeting=${channelName}`;
+    return `${baseUrl}/meeting/${channelName}`;
   };
 
   const copyToClipboard = async () => {
