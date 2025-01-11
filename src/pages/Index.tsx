@@ -139,7 +139,7 @@ const Index = () => {
               <Shield className="h-12 w-12 text-blue-600 mb-4" />
               <h3 className="text-xl font-semibold mb-2">Secure Calls</h3>
               <p className="text-gray-600">
-                End-to-end encryption for your privacy and security.
+                Encryption in transit for your privacy and security.
               </p>
             </div>
           </div>
