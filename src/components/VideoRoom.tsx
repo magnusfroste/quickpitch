@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import AgoraRTC, { IAgoraRTCClient } from "agora-rtc-sdk-ng";
+import AgoraRTC from "agora-rtc-sdk-ng";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Presentation } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
 const tempToken = "007eJxTYNh1qWMKg0Qqx3vDkDeva7mnJKUYzdp3c4KGauc1jUYe5VgFhjRT8+Qk08Q0YwuzRJPURFNL08QUSzMzixTLJFMjo8Rkk0mN6Q2BjAyLDG+yMjJAIIjPzpCTX5aYlJPKwAAAVwcfkg==";
@@ -26,119 +27,133 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
     videoTrack: any;
   }>({ audioTrack: null, videoTrack: null });
   const [trackState, setTrackState] = useState({ video: true, audio: true });
+  const [isPresentationMode, setIsPresentationMode] = useState(false);
+  const [presentationImages, setPresentationImages] = useState<any[]>([]);
   const localPlayerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (channelName !== "lovable") {
-      toast.error("Invalid channel. Please use 'lovable' as the meeting code.");
-      onLeave?.();
+    fetchPresentationImages();
+  }, []);
+
+  const fetchPresentationImages = async () => {
+    const { data, error } = await supabase
+      .from('presentation_images')
+      .select('*')
+      .order('sort_order');
+
+    if (error) {
+      toast.error('Failed to fetch presentation images');
       return;
     }
 
-    const handleUserPublished = async (user: any, mediaType: any) => {
-      console.log("Remote user published:", user.uid, mediaType);
-      await client.subscribe(user, mediaType);
-      console.log("Subscribed to remote user:", user.uid, mediaType);
-      
-      if (mediaType === "video") {
-        setUsers((prevUsers) => {
-          console.log("Adding user to video grid:", user.uid);
-          return [...prevUsers, user];
-        });
-      }
-      if (mediaType === "audio") {
-        console.log("Playing remote audio:", user.uid);
-        user.audioTrack?.play();
-      }
-    };
+    setPresentationImages(data || []);
+  };
 
-    const handleUserUnpublished = (user: any, mediaType: any) => {
-      console.log("Remote user unpublished:", user.uid, mediaType);
-      if (mediaType === "audio") {
-        user.audioTrack?.stop();
-      }
-      if (mediaType === "video") {
-        setUsers((prevUsers) => {
-          return prevUsers.filter((User) => User.uid !== user.uid);
-        });
-      }
-    };
+  const handleUserPublished = async (user: any, mediaType: any) => {
+    console.log("Remote user published:", user.uid, mediaType);
+    await client.subscribe(user, mediaType);
+    console.log("Subscribed to remote user:", user.uid, mediaType);
+    
+    if (mediaType === "video") {
+      setUsers((prevUsers) => {
+        console.log("Adding user to video grid:", user.uid);
+        return [...prevUsers, user];
+      });
+    }
+    if (mediaType === "audio") {
+      console.log("Playing remote audio:", user.uid);
+      user.audioTrack?.play();
+    }
+  };
 
-    const handleUserLeft = (user: any) => {
-      console.log("Remote user left:", user.uid);
+  const handleUserUnpublished = (user: any, mediaType: any) => {
+    console.log("Remote user unpublished:", user.uid, mediaType);
+    if (mediaType === "audio") {
+      user.audioTrack?.stop();
+    }
+    if (mediaType === "video") {
       setUsers((prevUsers) => {
         return prevUsers.filter((User) => User.uid !== user.uid);
       });
-    };
+    }
+  };
 
-    let init = async (name: string) => {
-      console.log("Initializing Agora client...");
-      client.on("user-published", handleUserPublished);
-      client.on("user-unpublished", handleUserUnpublished);
-      client.on("user-left", handleUserLeft);
+  const handleUserLeft = (user: any) => {
+    console.log("Remote user left:", user.uid);
+    setUsers((prevUsers) => {
+      return prevUsers.filter((User) => User.uid !== user.uid);
+    });
+  };
 
-      try {
-        console.log("Requesting media permissions...");
-        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        console.log("Media permissions granted");
-        
-        console.log("Joining channel:", name);
-        const uid = await client.join(appId, "lovable", tempToken, null);
-        console.log("Joined channel successfully. UID:", uid);
-        
-        console.log("Creating audio track...");
-        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
-          encoderConfig: "music_standard"
+  let init = async (name: string) => {
+    console.log("Initializing Agora client...");
+    client.on("user-published", handleUserPublished);
+    client.on("user-unpublished", handleUserUnpublished);
+    client.on("user-left", handleUserLeft);
+
+    try {
+      console.log("Requesting media permissions...");
+      await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      console.log("Media permissions granted");
+      
+      console.log("Joining channel:", name);
+      const uid = await client.join(appId, "lovable", tempToken, null);
+      console.log("Joined channel successfully. UID:", uid);
+      
+      console.log("Creating audio track...");
+      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+        encoderConfig: "music_standard"
+      });
+      console.log("Audio track created");
+      
+      console.log("Creating video track...");
+      const videoTrack = await AgoraRTC.createCameraVideoTrack({
+        encoderConfig: {
+          width: 640,
+          height: 480,
+          frameRate: 30,
+          bitrateMin: 400,
+          bitrateMax: 1000,
+        },
+        optimizationMode: "detail"
+      });
+      console.log("Video track created");
+
+      console.log("Publishing tracks to channel...");
+      await client.publish([audioTrack, videoTrack]);
+      console.log("Tracks published successfully");
+      
+      if (videoTrack && localPlayerRef.current) {
+        console.log("Playing local video track");
+        // Clear any existing content and play
+        localPlayerRef.current.innerHTML = '';
+        videoTrack.play(localPlayerRef.current, { 
+          fit: "cover",
+          mirror: true 
         });
-        console.log("Audio track created");
-        
-        console.log("Creating video track...");
-        const videoTrack = await AgoraRTC.createCameraVideoTrack({
-          encoderConfig: {
-            width: 640,
-            height: 480,
-            frameRate: 30,
-            bitrateMin: 400,
-            bitrateMax: 1000,
-          },
-          optimizationMode: "detail"
-        });
-        console.log("Video track created");
-
-        console.log("Publishing tracks to channel...");
-        await client.publish([audioTrack, videoTrack]);
-        console.log("Tracks published successfully");
-        
-        if (videoTrack && localPlayerRef.current) {
-          console.log("Playing local video track");
-          // Clear any existing content and play
-          localPlayerRef.current.innerHTML = '';
-          videoTrack.play(localPlayerRef.current, { 
-            fit: "cover",
-            mirror: true 
-          });
-          console.log("Local video track playing in container");
-        }
-        
-        setLocalTracks({ audioTrack, videoTrack });
-        setStart(true);
-        console.log("Setup complete");
-      } catch (error) {
-        console.error("Error during initialization:", error);
-        if (error instanceof Error) {
-          if (error.name === "NotAllowedError") {
-            toast.error("Please allow camera and microphone access to join the meeting");
-          } else {
-            toast.error("Failed to join the meeting: " + error.message);
-          }
-        } else {
-          toast.error("Failed to join the meeting");
-        }
+        console.log("Local video track playing in container");
       }
-    };
+      
+      setLocalTracks({ audioTrack, videoTrack });
+      setStart(true);
+      console.log("Setup complete");
+    } catch (error) {
+      console.error("Error during initialization:", error);
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError") {
+          toast.error("Please allow camera and microphone access to join the meeting");
+        } else {
+          toast.error("Failed to join the meeting: " + error.message);
+        }
+      } else {
+        toast.error("Failed to join the meeting");
+      }
+    }
+  };
 
-    init(channelName);
+  init(channelName);
 
+  useEffect(() => {
     return () => {
       console.log("Cleaning up...");
       if (localTracks.audioTrack) {
@@ -213,6 +228,11 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
     onLeave?.();
   };
 
+  const togglePresentation = () => {
+    setIsPresentationMode(!isPresentationMode);
+    toast.success(isPresentationMode ? 'Presentation ended' : 'Presentation started');
+  };
+
   return (
     <div className="h-screen bg-apple-gray p-4">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
@@ -245,6 +265,25 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
               return null;
             })}
         </div>
+
+        {/* Presentation Images Section */}
+        {isPresentationMode && (
+          <div className="mb-4 bg-white rounded-xl p-4 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4">Presentation</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {presentationImages.map((image) => (
+                <div key={image.id} className="relative aspect-video">
+                  <img
+                    src={image.image_url}
+                    alt={`Presentation image ${image.id}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-center gap-4 pb-8">
           <Button
             variant="outline"
@@ -269,6 +308,14 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
             ) : (
               <VideoOff className="h-5 w-5 text-red-500" />
             )}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full w-12 h-12 bg-white"
+            onClick={togglePresentation}
+          >
+            <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
           </Button>
           <Button
             variant="destructive"

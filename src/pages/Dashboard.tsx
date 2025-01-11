@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ImageUploader } from "@/components/ImageUploader";
 import { ImageGrid } from "@/components/ImageGrid";
-import { Copy, Share2, Video, Presentation } from "lucide-react";
+import { Copy, Share2, Video } from "lucide-react";
 import { toast } from "sonner";
 
 const Dashboard = () => {
@@ -82,16 +82,6 @@ const Dashboard = () => {
                 <Share2 className="h-4 w-4" />
                 Share
               </Button>
-              {isHost && (
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/presentation")}
-                  className="flex items-center gap-2"
-                >
-                  <Presentation className="h-4 w-4" />
-                  Start Presentation
-                </Button>
-              )}
             </div>
           </div>
 
