@@ -5,14 +5,17 @@ import { ImageUploader } from "@/components/ImageUploader";
 import { ImageGrid } from "@/components/ImageGrid";
 import { Copy, Share2, Video } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isHost] = useState(true); // TODO: implement actual host check
+  const [channelName, setChannelName] = useState("lovable");
 
   const getMeetingUrl = () => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}?meeting=lovable`;
+    return `${baseUrl}?meeting=${channelName}`;
   };
 
   const copyToClipboard = async () => {
@@ -44,7 +47,7 @@ const Dashboard = () => {
   };
 
   const joinMeeting = () => {
-    navigate("/?meeting=lovable");
+    navigate(`/?meeting=${channelName}`);
   };
 
   return (
@@ -58,30 +61,44 @@ const Dashboard = () => {
           {/* Meeting Controls */}
           <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
             <h2 className="text-xl font-semibold text-gray-900">Meeting Controls</h2>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={joinMeeting}
-                className="flex items-center gap-2"
-              >
-                <Video className="h-4 w-4" />
-                Join Meeting
-              </Button>
-              <Button
-                variant="outline"
-                onClick={copyToClipboard}
-                className="flex items-center gap-2"
-              >
-                <Copy className="h-4 w-4" />
-                Copy Link
-              </Button>
-              <Button
-                variant="outline"
-                onClick={shareMeeting}
-                className="flex items-center gap-2"
-              >
-                <Share2 className="h-4 w-4" />
-                Share
-              </Button>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="channel-name">Channel Name</Label>
+                <Input
+                  id="channel-name"
+                  value={channelName}
+                  onChange={(e) => setChannelName(e.target.value)}
+                  placeholder="Enter channel name"
+                  className="max-w-md"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={joinMeeting}
+                  className="flex items-center gap-2"
+                >
+                  <Video className="h-4 w-4" />
+                  Join Meeting
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={copyToClipboard}
+                  className="flex items-center gap-2"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy Link
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={shareMeeting}
+                  className="flex items-center gap-2"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share
+                </Button>
+              </div>
             </div>
           </div>
 
