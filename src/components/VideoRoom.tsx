@@ -81,6 +81,7 @@ const VideoRoom = () => {
             console.log("Found presenter:", presenter);
             console.log("Setting presentation mode to:", presenter.isPresentationMode);
             console.log("Setting current image index to:", presenter.currentImageIndex);
+            console.log("Presenter user ID:", presenter.userId);
             
             setSharedState({
               isPresentationMode: presenter.isPresentationMode,
@@ -321,17 +322,14 @@ const VideoRoom = () => {
     console.log("Toggling presentation mode:", newPresentationMode);
     
     if (presenceChannel.current) {
-      console.log("Tracking new presentation state:", {
+      const trackData = {
         isPresentationMode: newPresentationMode,
         currentImageIndex,
         userId: user?.id
-      });
+      };
+      console.log("Tracking new presentation state:", trackData);
       
-      await presenceChannel.current.track({
-        isPresentationMode: newPresentationMode,
-        currentImageIndex,
-        userId: user?.id
-      });
+      await presenceChannel.current.track(trackData);
     }
     
     setIsPresentationMode(newPresentationMode);
@@ -378,8 +376,11 @@ const VideoRoom = () => {
           <p className="text-blue-600">Presentation Mode: {sharedState.isPresentationMode ? 'Active' : 'Inactive'}</p>
           <p className="text-green-600">Current Image Index: {sharedState.currentImageIndex}</p>
           <p className="text-purple-600">Presenter ID: {sharedState.presenterUserId || 'None'}</p>
+          <p className="text-orange-600">Current User ID: {currentUserId || 'Not logged in'}</p>
+          <p className="text-red-600">Is Presenter: {currentUserId === sharedState.presenterUserId ? 'Yes' : 'No'}</p>
         </div>
 
+        {/* Video grid */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
@@ -449,6 +450,7 @@ const VideoRoom = () => {
           </div>
         )}
 
+        {/* Controls */}
         <div className="flex justify-center gap-4 pb-8">
           <Button
             variant="outline"
