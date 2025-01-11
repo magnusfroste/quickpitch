@@ -28,6 +28,7 @@ const VideoRoom = () => {
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   const [presentationImages, setPresentationImages] = useState<any[]>([]);
   const localPlayerRef = useRef<HTMLDivElement>(null);
+  const presenceChannel = useRef<any>(null);
 
   useEffect(() => {
     if (!channelName) {
@@ -35,6 +36,33 @@ const VideoRoom = () => {
       navigate('/dashboard');
       return;
     }
+
+    // Initialize Supabase Presence channel
+    presenceChannel.current = supabase.channel(`room:${channelName}`, {
+      config: {
+        presence: {
+          key: supabase.auth.user()?.id,
+        },
+      },
+    });
+
+    // Subscribe to presence changes
+    presenceChannel.current
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.current.presenceState();
+        // Update presentation mode based on any presenter's state
+        const anyPresenting = Object.values(state).some((presences: any) => 
+          presences.some((presence: any) => presence.isPresentationMode)
+        );
+        setIsPresentationMode(anyPresenting);
+      })
+      .subscribe(async (status: string) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.current.track({
+            isPresentationMode: false,
+          });
+        }
+      });
 
     const initializeAgora = async () => {
       try {
@@ -68,6 +96,10 @@ const VideoRoom = () => {
       client.leave().catch((err) => {
         console.error("Error leaving channel:", err);
       });
+      if (presenceChannel.current) {
+        presenceChannel.current.untrack();
+        supabase.removeChannel(presenceChannel.current);
+      }
       console.log("Cleanup complete");
     };
   }, [channelName]);
@@ -233,9 +265,18 @@ const VideoRoom = () => {
     navigate('/dashboard'); // Changed from '/' to '/dashboard'
   };
 
-  const togglePresentation = () => {
-    setIsPresentationMode(!isPresentationMode);
-    toast.success(isPresentationMode ? 'Presentation ended' : 'Presentation started');
+  const togglePresentation = async () => {
+    const newPresentationMode = !isPresentationMode;
+    setIsPresentationMode(newPresentationMode);
+    
+    // Update presence state
+    if (presenceChannel.current) {
+      await presenceChannel.current.track({
+        isPresentationMode: newPresentationMode,
+      });
+    }
+    
+    toast.success(newPresentationMode ? 'Presentation started' : 'Presentation ended');
   };
 
   return (
