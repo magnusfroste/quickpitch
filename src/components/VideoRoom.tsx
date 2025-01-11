@@ -39,11 +39,13 @@ const VideoRoom = () => {
     currentImageIndex: 0
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isHost, setIsHost] = useState(false);
 
   useEffect(() => {
     const getCurrentUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
+      setIsHost(!!user?.id);
     };
     getCurrentUser();
   }, []);
@@ -71,7 +73,6 @@ const VideoRoom = () => {
           const state = presenceChannel.current.presenceState();
           console.log("Presence state updated:", state);
           
-          // Find any presenter in the room
           const presenterState = Object.values(state).find((presences: any) => 
             presences.some((presence: any) => presence.isPresentationMode)
           );
@@ -315,7 +316,6 @@ const VideoRoom = () => {
     await client.leave();
     setStart(false);
     
-    // Check if user is authenticated
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       navigate('/dashboard');
@@ -484,14 +484,17 @@ const VideoRoom = () => {
               <VideoOff className="h-5 w-5 text-red-500" />
             )}
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full w-12 h-12 bg-white"
-            onClick={togglePresentation}
-          >
-            <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
-          </Button>
+          {/* Only show presentation button for authenticated host */}
+          {isHost && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full w-12 h-12 bg-white"
+              onClick={togglePresentation}
+            >
+              <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
+            </Button>
+          )}
           <Button
             variant="destructive"
             size="icon"
