@@ -7,11 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
 import { MeetingTimer } from "./MeetingTimer";
 
-const appId = import.meta.env.VITE_AGORA_APP_ID;
-
-if (!appId) {
-  console.error("Missing VITE_AGORA_APP_ID environment variable");
-}
+const appId = "f57cb5af386a4ea595ad9668d9b522ac";
 
 const client = AgoraRTC.createClient({ 
   mode: "rtc", 
@@ -47,99 +43,64 @@ const VideoRoom = () => {
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setCurrentUserId(session.user.id);
-          setIsHost(true);
-        } else {
-          setIsHost(false);
-        }
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Auth check error:", error);
-        setIsHost(false);
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
-
-  useEffect(() => {
-    if (isLoading || isInitialized) return;
-
     if (!channelName) {
       toast.error("Invalid channel name");
-      navigate('/');
-      return;
-    }
-
-    if (!appId) {
-      toast.error("Missing Agora App ID configuration");
-      navigate('/');
+      navigate('/dashboard');
       return;
     }
 
     const initializePresenceChannel = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        const channelId = `room:${channelName}`;
-        presenceChannel.current = supabase.channel(channelId, {
-          config: {
-            presence: {
-              key: session?.user.id || 'guest',
-            },
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const channelId = `room:${channelName}`;
+      presenceChannel.current = supabase.channel(channelId, {
+        config: {
+          presence: {
+            key: user?.id,
           },
-        });
+        },
+      });
 
-        presenceChannel.current
-          .on('presence', { event: 'sync' }, () => {
-            const state = presenceChannel.current.presenceState();
-            console.log("Presence state updated:", state);
-            
-            const presenterState = Object.values(state).find((presences: any) => 
-              presences.some((presence: any) => presence.isPresentationMode)
-            );
-            
-            if (presenterState) {
-              const presenter = presenterState[0];
-              setSharedState({
-                isPresentationMode: presenter.isPresentationMode,
-                currentImageIndex: presenter.currentImageIndex,
-                presenterUserId: presenter.userId
-              });
-              setIsPresentationMode(presenter.isPresentationMode);
-              setCurrentImageIndex(presenter.currentImageIndex);
-            } else {
-              setSharedState({
-                isPresentationMode: false,
-                currentImageIndex: 0,
-                presenterUserId: undefined
-              });
-              setIsPresentationMode(false);
-              setCurrentImageIndex(0);
-            }
-          })
-          .subscribe(async (status: string) => {
-            if (status === 'SUBSCRIBED') {
-              await presenceChannel.current.track({
-                isPresentationMode: false,
-                currentImageIndex: 0,
-                userId: session?.user.id || 'guest'
-              });
-            }
-          });
-      } catch (error) {
-        console.error("Error initializing presence channel:", error);
-        toast.error("Failed to initialize presence channel");
-      }
+      presenceChannel.current
+        .on('presence', { event: 'sync' }, () => {
+          const state = presenceChannel.current.presenceState();
+          console.log("Presence state updated:", state);
+          
+          const presenterState = Object.values(state).find((presences: any) => 
+            presences.some((presence: any) => presence.isPresentationMode)
+          );
+          
+          if (presenterState) {
+            const presenter = presenterState[0];
+            setSharedState({
+              isPresentationMode: presenter.isPresentationMode,
+              currentImageIndex: presenter.currentImageIndex,
+              presenterUserId: presenter.userId
+            });
+            setIsPresentationMode(presenter.isPresentationMode);
+            setCurrentImageIndex(presenter.currentImageIndex);
+          } else {
+            setSharedState({
+              isPresentationMode: false,
+              currentImageIndex: 0,
+              presenterUserId: undefined
+            });
+            setIsPresentationMode(false);
+            setCurrentImageIndex(0);
+          }
+        })
+        .subscribe(async (status: string) => {
+          if (status === 'SUBSCRIBED') {
+            const { data: { user } } = await supabase.auth.getUser();
+            await presenceChannel.current.track({
+              isPresentationMode: false,
+              currentImageIndex: 0,
+              userId: user?.id
+            });
+          }
+        });
     };
 
     const getAgoraToken = async () => {
@@ -169,7 +130,6 @@ const VideoRoom = () => {
         client.on("user-left", handleUserLeft);
         
         await client.join(appId, channelName, token, uid);
-        console.log("Joined channel successfully with UID:", uid);
         
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
           encoderConfig: "music_standard"
@@ -187,17 +147,10 @@ const VideoRoom = () => {
         });
 
         await client.publish([audioTrack, videoTrack]);
-        console.log("Local tracks published successfully");
 
         setLocalTracks({ audioTrack, videoTrack });
         setStart(true);
         setMeetingStartTime(Date.now());
-        setIsInitialized(true);
-
-        if (localPlayerRef.current) {
-          console.log("Playing video track in local player");
-          videoTrack.play(localPlayerRef.current);
-        }
       } catch (error) {
         console.error("Error during initialization:", error);
         if (error instanceof Error) {
@@ -209,22 +162,12 @@ const VideoRoom = () => {
         } else {
           toast.error("Failed to join the meeting");
         }
-        navigate('/');
+        navigate('/dashboard');
       }
     };
 
-    const initialize = async () => {
-      try {
-        await initializePresenceChannel();
-        await initializeAgora();
-      } catch (error) {
-        console.error("Initialization error:", error);
-        toast.error("Failed to initialize meeting");
-        navigate('/');
-      }
-    };
-
-    initialize();
+    initializePresenceChannel();
+    initializeAgora();
 
     return () => {
       if (localTracks.audioTrack) {
@@ -245,20 +188,29 @@ const VideoRoom = () => {
         presenceChannel.current.untrack();
         supabase.removeChannel(presenceChannel.current);
       }
+      // Clean up video containers
       Object.keys(userVideoRefs.current).forEach(uid => {
         if (userVideoRefs.current[uid]) {
           userVideoRefs.current[uid]!.innerHTML = '';
         }
       });
     };
-  }, [channelName, isLoading, isInitialized, navigate]);
+  }, [channelName]);
 
   useEffect(() => {
-    if (localPlayerRef.current && localTracks.videoTrack) {
-      console.log("Playing video track in local player (ref update)");
-      localTracks.videoTrack.play(localPlayerRef.current);
+    fetchPresentationImages();
+  }, []);
+
+  useEffect(() => {
+    if (localTracks.videoTrack && localPlayerRef.current && start) {
+      console.log("Updating local video display");
+      localPlayerRef.current.innerHTML = '';
+      localTracks.videoTrack.play(localPlayerRef.current, { 
+        fit: "cover",
+        mirror: true 
+      });
     }
-  }, [localPlayerRef.current, localTracks.videoTrack]);
+  }, [localTracks.videoTrack, start]);
 
   const handleUserPublished = async (user: any, mediaType: any) => {
     console.log("Remote user published:", user.uid, mediaType);
@@ -268,46 +220,34 @@ const VideoRoom = () => {
       console.log("Subscribed to remote user:", user.uid, mediaType);
       
       if (mediaType === "video") {
-        // Update users state immediately
         setUsers(prevUsers => {
-          const userExists = prevUsers.some(u => u.uid === user.uid);
-          if (!userExists) {
-            console.log("Adding new user to users array:", user.uid);
+          // Only add the user if they're not already in the list
+          if (!prevUsers.find(u => u.uid === user.uid)) {
+            console.log("Adding user to video grid:", user.uid);
             return [...prevUsers, user];
           }
           return prevUsers;
         });
 
-        // Create video container if it doesn't exist
+        // Ensure we have a container for this user's video
         if (!userVideoRefs.current[user.uid]) {
-          console.log("Creating new video container for user:", user.uid);
-          const container = document.createElement('div');
-          container.style.width = '100%';
-          container.style.height = '100%';
-          container.style.backgroundColor = 'black';
-          userVideoRefs.current[user.uid] = container;
+          userVideoRefs.current[user.uid] = document.createElement('div');
         }
 
-        // Play the video track
-        if (user.videoTrack) {
-          console.log("Playing video track for user:", user.uid);
-          const container = userVideoRefs.current[user.uid];
-          if (container) {
-            container.innerHTML = '';
-            user.videoTrack.play(container);
-          }
+        // Clear the container before playing
+        if (userVideoRefs.current[user.uid]) {
+          userVideoRefs.current[user.uid]!.innerHTML = '';
+          console.log("Playing remote video for user:", user.uid);
+          user.videoTrack?.play(userVideoRefs.current[user.uid]);
         }
       }
       
       if (mediaType === "audio") {
-        console.log("Playing audio track for user:", user.uid);
-        if (user.audioTrack) {
-          user.audioTrack.play();
-        }
+        console.log("Playing remote audio:", user.uid);
+        user.audioTrack?.play();
       }
     } catch (error) {
       console.error("Error handling user published:", error);
-      toast.error("Failed to connect with remote user");
     }
   };
 
@@ -319,20 +259,26 @@ const VideoRoom = () => {
       }
     }
     if (mediaType === "video") {
-      setUsers((prevUsers) => prevUsers.filter((User) => User.uid !== user.uid));
+      // Clear the video container
       if (userVideoRefs.current[user.uid]) {
         userVideoRefs.current[user.uid]!.innerHTML = '';
       }
+      setUsers((prevUsers) => {
+        return prevUsers.filter((User) => User.uid !== user.uid);
+      });
     }
   };
 
   const handleUserLeft = (user: any) => {
     console.log("Remote user left:", user.uid);
-    setUsers((prevUsers) => prevUsers.filter((User) => User.uid !== user.uid));
+    // Clear the video container
     if (userVideoRefs.current[user.uid]) {
       userVideoRefs.current[user.uid]!.innerHTML = '';
       delete userVideoRefs.current[user.uid];
     }
+    setUsers((prevUsers) => {
+      return prevUsers.filter((User) => User.uid !== user.uid);
+    });
   };
 
   const fetchPresentationImages = async () => {
@@ -396,6 +342,7 @@ const VideoRoom = () => {
       localTracks.videoTrack.close();
     }
     
+    // Clean up all video containers
     Object.keys(userVideoRefs.current).forEach(uid => {
       if (userVideoRefs.current[uid]) {
         userVideoRefs.current[uid]!.innerHTML = '';
@@ -405,8 +352,8 @@ const VideoRoom = () => {
     await client.leave();
     setStart(false);
     
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
       navigate('/dashboard');
     } else {
       navigate('/');
@@ -414,14 +361,14 @@ const VideoRoom = () => {
   };
 
   const togglePresentation = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
     const newPresentationMode = !isPresentationMode;
     
     if (presenceChannel.current) {
       await presenceChannel.current.track({
         isPresentationMode: newPresentationMode,
         currentImageIndex,
-        userId: session?.user.id || 'guest'
+        userId: user?.id
       });
     }
     
@@ -434,12 +381,12 @@ const VideoRoom = () => {
       const newIndex = currentImageIndex + 1;
       setCurrentImageIndex(newIndex);
       
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
       if (presenceChannel.current) {
         await presenceChannel.current.track({
           isPresentationMode: true,
           currentImageIndex: newIndex,
-          userId: session?.user.id || 'guest'
+          userId: user?.id
         });
       }
     }
@@ -450,32 +397,16 @@ const VideoRoom = () => {
       const newIndex = currentImageIndex - 1;
       setCurrentImageIndex(newIndex);
       
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
       if (presenceChannel.current) {
         await presenceChannel.current.track({
           isPresentationMode: true,
           currentImageIndex: newIndex,
-          userId: session?.user.id || 'guest'
+          userId: user?.id
         });
       }
     }
   };
-
-  const shouldShowPresentation = () => {
-    return isPresentationMode || (sharedState.isPresentationMode && currentUserId !== sharedState.presenterUserId);
-  };
-
-  useEffect(() => {
-    fetchPresentationImages();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="h-screen bg-apple-gray flex items-center justify-center">
-        <div className="text-lg text-gray-600">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen bg-apple-gray p-4">
@@ -492,7 +423,7 @@ const VideoRoom = () => {
         
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
-            <div className="relative bg-black rounded-2xl overflow-hidden shadow-lg h-[300px]">
+            <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
               <div ref={localPlayerRef} className="absolute inset-0"></div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
@@ -502,18 +433,10 @@ const VideoRoom = () => {
           {users.map((user) => (
             <div
               key={user.uid}
-              className="relative bg-black rounded-2xl overflow-hidden shadow-lg h-[300px]"
+              className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]"
             >
               <div
-                ref={el => {
-                  if (el) {
-                    userVideoRefs.current[user.uid] = el;
-                    if (user.videoTrack) {
-                      console.log("Playing video track in ref callback for user:", user.uid);
-                      user.videoTrack.play(el);
-                    }
-                  }
-                }}
+                ref={el => userVideoRefs.current[user.uid] = el}
                 className="absolute inset-0"
               />
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
@@ -523,12 +446,12 @@ const VideoRoom = () => {
           ))}
         </div>
 
-        {shouldShowPresentation() && presentationImages.length > 0 && (
+        {sharedState.isPresentationMode && presentationImages.length > 0 && (
           <div className="mb-4 bg-white rounded-xl p-4 shadow-sm">
             <div className="relative">
               <img
-                src={presentationImages[currentImageIndex]?.image_url}
-                alt={`Presentation image ${currentImageIndex + 1}`}
+                src={presentationImages[sharedState.currentImageIndex]?.image_url}
+                alt={`Presentation image ${sharedState.currentImageIndex + 1}`}
                 className="w-full h-[400px] object-contain rounded-lg"
               />
               {presentationImages.length > 1 && currentUserId === sharedState.presenterUserId && (
@@ -538,7 +461,7 @@ const VideoRoom = () => {
                     size="icon"
                     className="rounded-full bg-white/80 hover:bg-white"
                     onClick={previousImage}
-                    disabled={currentImageIndex === 0}
+                    disabled={sharedState.currentImageIndex === 0}
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
@@ -547,14 +470,14 @@ const VideoRoom = () => {
                     size="icon"
                     className="rounded-full bg-white/80 hover:bg-white"
                     onClick={nextImage}
-                    disabled={currentImageIndex === presentationImages.length - 1}
+                    disabled={sharedState.currentImageIndex === presentationImages.length - 1}
                   >
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
               )}
               <div className="absolute bottom-4 right-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
-                {currentImageIndex + 1} / {presentationImages.length}
+                {sharedState.currentImageIndex + 1} / {presentationImages.length}
               </div>
             </div>
           </div>
