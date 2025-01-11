@@ -54,7 +54,6 @@ const VideoRoom = () => {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (session) {
           setCurrentUserId(session.user.id);
           setIsHost(true);
@@ -77,13 +76,13 @@ const VideoRoom = () => {
 
     if (!channelName) {
       toast.error("Invalid channel name");
-      navigate('/dashboard');
+      navigate('/');
       return;
     }
 
     if (!appId) {
       toast.error("Missing Agora App ID configuration");
-      navigate('/dashboard');
+      navigate('/');
       return;
     }
 
@@ -170,7 +169,7 @@ const VideoRoom = () => {
         client.on("user-left", handleUserLeft);
         
         await client.join(appId, channelName, token, uid);
-        console.log("Joined channel successfully");
+        console.log("Joined channel successfully with UID:", uid);
         
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
           encoderConfig: "music_standard"
@@ -210,7 +209,7 @@ const VideoRoom = () => {
         } else {
           toast.error("Failed to join the meeting");
         }
-        navigate('/dashboard');
+        navigate('/');
       }
     };
 
@@ -221,7 +220,7 @@ const VideoRoom = () => {
       } catch (error) {
         console.error("Initialization error:", error);
         toast.error("Failed to initialize meeting");
-        navigate('/dashboard');
+        navigate('/');
       }
     };
 
@@ -276,14 +275,13 @@ const VideoRoom = () => {
           return prevUsers;
         });
 
-        // Create a new container for the user's video if it doesn't exist
         if (!userVideoRefs.current[user.uid]) {
           userVideoRefs.current[user.uid] = document.createElement('div');
           userVideoRefs.current[user.uid]!.style.width = '100%';
           userVideoRefs.current[user.uid]!.style.height = '100%';
+          userVideoRefs.current[user.uid]!.style.backgroundColor = 'black';
         }
 
-        // Play the video track in the container
         if (userVideoRefs.current[user.uid]) {
           const container = userVideoRefs.current[user.uid];
           if (container) {
@@ -596,6 +594,3 @@ const VideoRoom = () => {
       </div>
     </div>
   );
-};
-
-export default VideoRoom;
