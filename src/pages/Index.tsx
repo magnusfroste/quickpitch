@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Copy, Share2, LogOut } from "lucide-react";
+import { Copy, Share2, LogOut, Video, Users, Shield } from "lucide-react";
 
 const Index = () => {
   const [channelName, setChannelName] = useState("");
@@ -21,7 +21,6 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Extract meeting code from URL if present
     const urlParams = new URLSearchParams(window.location.search);
     const meetingCode = urlParams.get('meeting');
     if (meetingCode) {
@@ -104,82 +103,132 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-apple-gray flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl p-8 shadow-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold text-apple-text">
-              Video Meeting
-            </h1>
-            {user && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
-            )}
-          </div>
-          <div className="space-y-4">
-            <div className="flex gap-4">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Hero Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">
+            Confablink
+          </h1>
+          {user && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-8">
+            <h2 className="text-5xl font-bold text-gray-900 leading-tight">
+              Connect with anyone, anywhere, instantly
+            </h2>
+            <p className="text-xl text-gray-600">
+              Start or join a secure video meeting with crystal-clear quality and easy-to-use features.
+            </p>
+            <div className="space-y-4">
               <Input
                 type="text"
                 placeholder="Enter meeting code"
                 value={channelName}
                 onChange={(e) => setChannelName(e.target.value)}
-                className="flex-1"
+                className="text-lg p-6 rounded-xl"
               />
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    onClick={() => generateMeetingCode()}
-                  >
-                    Host
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Share Meeting Link</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-lg">
-                      <span className="flex-1 font-mono text-sm truncate">
-                        {getMeetingUrl()}
-                      </span>
+              <div className="flex gap-4">
+                <Button
+                  onClick={joinMeeting}
+                  className="flex-1 h-12 text-lg bg-blue-600 hover:bg-blue-700"
+                >
+                  Join Meeting
+                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={generateMeetingCode}
+                      className="flex-1 h-12 text-lg"
+                    >
+                      Host Meeting
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Share Meeting Link</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-lg">
+                        <span className="flex-1 font-mono text-sm truncate">
+                          {getMeetingUrl()}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(getMeetingUrl())}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={shareMeeting}
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyToClipboard(getMeetingUrl())}
+                        onClick={joinMeeting}
+                        className="w-full bg-blue-600 hover:bg-blue-700"
                       >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={shareMeeting}
-                      >
-                        <Share2 className="h-4 w-4" />
+                        Join Meeting
                       </Button>
                     </div>
-                    <Button
-                      onClick={joinMeeting}
-                      className="w-full bg-apple-blue hover:bg-apple-blue/90"
-                    >
-                      Join Meeting
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
-            <Button
-              onClick={joinMeeting}
-              className="w-full bg-apple-blue hover:bg-apple-blue/90"
-            >
-              Join Meeting
-            </Button>
+          </div>
+
+          <div className="hidden md:block">
+            <div className="bg-white p-8 rounded-2xl shadow-xl">
+              <img
+                src="/placeholder.svg"
+                alt="Video meeting illustration"
+                className="w-full h-auto"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="bg-white py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-blue-50 p-6 rounded-xl">
+              <Video className="h-12 w-12 text-blue-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">HD Video Calls</h3>
+              <p className="text-gray-600">
+                Crystal clear video quality for seamless communication.
+              </p>
+            </div>
+            <div className="bg-blue-50 p-6 rounded-xl">
+              <Users className="h-12 w-12 text-blue-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Group Meetings</h3>
+              <p className="text-gray-600">
+                Connect with multiple participants in one session.
+              </p>
+            </div>
+            <div className="bg-blue-50 p-6 rounded-xl">
+              <Shield className="h-12 w-12 text-blue-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Secure Calls</h3>
+              <p className="text-gray-600">
+                End-to-end encryption for your privacy and security.
+              </p>
+            </div>
           </div>
         </div>
       </div>

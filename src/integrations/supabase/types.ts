@@ -480,6 +480,30 @@ export type Database = {
         }
         Relationships: []
       }
+      presentation_images: {
+        Row: {
+          created_at: string | null
+          id: number
+          image_url: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          image_url: string
+          sort_order: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          image_url?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       sellers: {
         Row: {
           bio: string | null
