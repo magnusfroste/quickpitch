@@ -594,3 +594,6 @@ const VideoRoom = () => {
       </div>
     </div>
   );
+};
+
+export default VideoRoom;
