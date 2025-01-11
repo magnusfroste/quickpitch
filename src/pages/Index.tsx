@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Video, Users, Shield } from "lucide-react";
+import { LogOut, Video, Users, Shield, Timer } from "lucide-react";
 
 const Index = () => {
   const [channelName, setChannelName] = useState("");
@@ -74,10 +74,10 @@ const Index = () => {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <h2 className="text-5xl font-bold text-gray-900 leading-tight">
-              Connect with anyone, anywhere, instantly
+              Your pitch. 5 slides.<br />20 minutes. Done.
             </h2>
             <p className="text-xl text-gray-600">
-              Start or join a secure video meeting with crystal-clear quality and easy-to-use features.
+              Get straight to the point with our time-boxed format. Show respect for your prospect's time, and they'll respect your pitch.
             </p>
             <div className="space-y-4">
               <Input
@@ -122,17 +122,17 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-blue-50 p-6 rounded-xl">
+              <Timer className="h-12 w-12 text-blue-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">20-Minute Timer</h3>
+              <p className="text-gray-600">
+                Time is money. We'll keep you on track with our built-in timer.
+              </p>
+            </div>
+            <div className="bg-blue-50 p-6 rounded-xl">
               <Video className="h-12 w-12 text-blue-600 mb-4" />
               <h3 className="text-xl font-semibold mb-2">5-Slide Limit</h3>
               <p className="text-gray-600">
                 Keep your pitch focused and respect everyone's time.
-              </p>
-            </div>
-            <div className="bg-blue-50 p-6 rounded-xl">
-              <Users className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Clear Value Props</h3>
-              <p className="text-gray-600">
-                Get your key points across effectively and efficiently.
               </p>
             </div>
             <div className="bg-blue-50 p-6 rounded-xl">
