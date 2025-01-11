@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
 
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
-const tempToken = "007eJxTYOi+eHthToNTyMyzF4J87MveXpY97PbN60tOlOShXTtfm0xVYEgzNU9OMk1MM7YwSzRJTTS1NE1MsTQzs0ixTDI1MkpMPjuhKb0hkJGhe990ZkYGCATx2Rly8ssSk3JSGRgAlzoj8w==";
+const tempToken = "007eJxTYNh1qWMKg0Qqx3vDkDeva7mnJKUYzdp3c4KGauc1jUYe5VgFhjRT8+Qk08Q0YwuzRJPURFNL08QUSzMzixTLJFMjo8Rkk0mN6Q2BjAyLDG+yMjJAIIjPzpCTX5aYlJPKwAAAVwcfkg==";
 
 const client = AgoraRTC.createClient({ 
   mode: "rtc", 
@@ -39,54 +39,13 @@ const VideoRoom = () => {
     currentImageIndex: 0
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isHost, setIsHost] = useState(false);
-
-  const cleanup = async () => {
-    console.log("Cleaning up...");
-    
-    // Clean up Agora client first
-    client.removeAllListeners();
-    if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
-      try {
-        await client.leave();
-      } catch (err) {
-        console.error("Error during client leave:", err);
-      }
-    }
-    
-    // Then clean up local tracks
-    if (localTracks.audioTrack) {
-      localTracks.audioTrack.stop();
-      localTracks.audioTrack.close();
-    }
-    if (localTracks.videoTrack) {
-      localTracks.videoTrack.stop();
-      localTracks.videoTrack.close();
-    }
-    
-    // Reset states
-    setLocalTracks({ audioTrack: null, videoTrack: null });
-    setStart(false);
-    setUsers([]);
-    
-    // Clean up Supabase presence
-    if (presenceChannel.current) {
-      try {
-        await presenceChannel.current.untrack();
-        await supabase.removeChannel(presenceChannel.current);
-      } catch (err) {
-        console.error("Error during presence cleanup:", err);
-      }
-    }
-  };
 
   useEffect(() => {
-    const checkUser = async () => {
+    const getCurrentUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
-      setIsHost(!!user);
     };
-    checkUser();
+    getCurrentUser();
   }, []);
 
   useEffect(() => {
@@ -97,8 +56,6 @@ const VideoRoom = () => {
     }
 
     const initializePresenceChannel = async () => {
-      if (!isHost) return;
-      
       const { data: { user } } = await supabase.auth.getUser();
       
       presenceChannel.current = supabase.channel(`room:${channelName}`, {
@@ -114,12 +71,17 @@ const VideoRoom = () => {
           const state = presenceChannel.current.presenceState();
           console.log("Presence state updated:", state);
           
+          // Find any presenter in the room
           const presenterState = Object.values(state).find((presences: any) => 
             presences.some((presence: any) => presence.isPresentationMode)
           );
           
           if (presenterState) {
             const presenter = presenterState[0];
+            console.log("Found presenter:", presenter);
+            console.log("Setting presentation mode to:", presenter.isPresentationMode);
+            console.log("Setting current image index to:", presenter.currentImageIndex);
+            
             setSharedState({
               isPresentationMode: presenter.isPresentationMode,
               currentImageIndex: presenter.currentImageIndex,
@@ -128,6 +90,7 @@ const VideoRoom = () => {
             setIsPresentationMode(presenter.isPresentationMode);
             setCurrentImageIndex(presenter.currentImageIndex);
           } else {
+            console.log("No presenter found, resetting presentation state");
             setSharedState({
               isPresentationMode: false,
               currentImageIndex: 0,
@@ -150,20 +113,25 @@ const VideoRoom = () => {
         });
     };
 
-    const cleanup = async () => {
-      console.log("Cleaning up...");
-      
-      // Clean up Agora client first
-      client.removeAllListeners();
-      if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
-        try {
-          await client.leave();
-        } catch (err) {
-          console.error("Error during client leave:", err);
-        }
+    const initializeAgora = async () => {
+      try {
+        console.log("Initializing Agora client...");
+        client.on("user-published", handleUserPublished);
+        client.on("user-unpublished", handleUserUnpublished);
+        client.on("user-left", handleUserLeft);
+        await init(channelName);
+      } catch (error) {
+        console.error("Error initializing Agora:", error);
+        toast.error("Failed to initialize video conference");
+        navigate('/dashboard');
       }
-      
-      // Then clean up local tracks
+    };
+
+    initializePresenceChannel();
+    initializeAgora();
+
+    return () => {
+      console.log("Cleaning up...");
       if (localTracks.audioTrack) {
         localTracks.audioTrack.stop();
         localTracks.audioTrack.close();
@@ -172,111 +140,48 @@ const VideoRoom = () => {
         localTracks.videoTrack.stop();
         localTracks.videoTrack.close();
       }
-      
-      // Reset states
-      setLocalTracks({ audioTrack: null, videoTrack: null });
-      setStart(false);
-      setUsers([]);
-      
-      // Clean up Supabase presence
+      client.off("user-published", handleUserPublished);
+      client.off("user-unpublished", handleUserUnpublished);
+      client.off("user-left", handleUserLeft);
+      client.leave().catch((err) => {
+        console.error("Error leaving channel:", err);
+      });
       if (presenceChannel.current) {
-        try {
-          await presenceChannel.current.untrack();
-          await supabase.removeChannel(presenceChannel.current);
-        } catch (err) {
-          console.error("Error during presence cleanup:", err);
-        }
+        presenceChannel.current.untrack();
+        supabase.removeChannel(presenceChannel.current);
       }
+      console.log("Cleanup complete");
     };
+  }, [channelName]);
 
-    const init = async (name: string) => {
-      console.log("Requesting media permissions...");
-      try {
-        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        console.log("Media permissions granted");
-        
-        console.log("Joining channel:", name);
-        const uid = await client.join(appId, name, tempToken, null);
-        console.log("Joined channel successfully. UID:", uid);
-        
-        console.log("Creating audio track...");
-        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
-          encoderConfig: "music_standard"
-        });
-        console.log("Audio track created");
-        
-        console.log("Creating video track...");
-        const videoTrack = await AgoraRTC.createCameraVideoTrack({
-          encoderConfig: {
-            width: 640,
-            height: 480,
-            frameRate: 30,
-            bitrateMin: 400,
-            bitrateMax: 1000,
-          },
-          optimizationMode: "detail"
-        });
-        console.log("Video track created");
+  useEffect(() => {
+    if (localTracks.videoTrack && localPlayerRef.current && start) {
+      console.log("Updating video display");
+      localPlayerRef.current.innerHTML = '';
+      localTracks.videoTrack.play(localPlayerRef.current, { 
+        fit: "cover",
+        mirror: true 
+      });
+    }
+  }, [localTracks.videoTrack, start]);
 
-        if (videoTrack && localPlayerRef.current) {
-          videoTrack.play(localPlayerRef.current);
-        }
+  useEffect(() => {
+    fetchPresentationImages();
+  }, []);
 
-        console.log("Publishing tracks to channel...");
-        await client.publish([audioTrack, videoTrack]);
-        console.log("Tracks published successfully");
+  const fetchPresentationImages = async () => {
+    const { data, error } = await supabase
+      .from('presentation_images')
+      .select('*')
+      .order('sort_order');
 
-        setLocalTracks({ audioTrack, videoTrack });
-        setStart(true);
-        
-        console.log("Setup complete");
-      } catch (error) {
-        console.error("Error during initialization:", error);
-        if (error instanceof Error) {
-          if (error.name === "NotAllowedError") {
-            toast.error("Please allow camera and microphone access to join the meeting");
-          } else {
-            toast.error("Failed to join the meeting: " + error.message);
-          }
-        } else {
-          toast.error("Failed to join the meeting");
-        }
-        if (isHost) {
-          navigate('/dashboard');
-        }
-        throw error;
-      }
-    };
+    if (error) {
+      toast.error('Failed to fetch presentation images');
+      return;
+    }
 
-    const initializeAgora = async () => {
-      try {
-        console.log("Initializing Agora client...");
-        
-        // Set up event listeners
-        client.on("user-published", handleUserPublished);
-        client.on("user-unpublished", handleUserUnpublished);
-        client.on("user-left", handleUserLeft);
-
-        await init(channelName);
-        
-      } catch (error) {
-        console.error("Error initializing Agora:", error);
-        toast.error("Failed to initialize video conference");
-        if (isHost) {
-          navigate('/dashboard');
-        }
-      }
-    };
-
-    // Start initialization
-    initializePresenceChannel();
-    initializeAgora();
-
-    // Cleanup on unmount
-    return () => {
-      cleanup();
-    };
-  }, [channelName, isHost, navigate]);
+    setPresentationImages(data || []);
+  };
 
   const handleUserPublished = async (user: any, mediaType: any) => {
     console.log("Remote user published:", user.uid, mediaType);
@@ -314,6 +219,58 @@ const VideoRoom = () => {
     });
   };
 
+  const init = async (name: string) => {
+    console.log("Requesting media permissions...");
+    try {
+      await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      console.log("Media permissions granted");
+      
+      console.log("Joining channel:", name);
+      const uid = await client.join(appId, name, tempToken, null);
+      console.log("Joined channel successfully. UID:", uid);
+      
+      console.log("Creating audio track...");
+      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+        encoderConfig: "music_standard"
+      });
+      console.log("Audio track created");
+      
+      console.log("Creating video track...");
+      const videoTrack = await AgoraRTC.createCameraVideoTrack({
+        encoderConfig: {
+          width: 640,
+          height: 480,
+          frameRate: 30,
+          bitrateMin: 400,
+          bitrateMax: 1000,
+        },
+        optimizationMode: "detail"
+      });
+      console.log("Video track created");
+
+      console.log("Publishing tracks to channel...");
+      await client.publish([audioTrack, videoTrack]);
+      console.log("Tracks published successfully");
+
+      setLocalTracks({ audioTrack, videoTrack });
+      setStart(true);
+      
+      console.log("Setup complete");
+    } catch (error) {
+      console.error("Error during initialization:", error);
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError") {
+          toast.error("Please allow camera and microphone access to join the meeting");
+        } else {
+          toast.error("Failed to join the meeting: " + error.message);
+        }
+      } else {
+        toast.error("Failed to join the meeting");
+      }
+      navigate('/dashboard');
+    }
+  };
+
   const mute = async (type: "audio" | "video") => {
     try {
       if (type === "audio") {
@@ -344,23 +301,37 @@ const VideoRoom = () => {
   };
 
   const leaveChannel = async () => {
-    await cleanup();
-    navigate('/dashboard');
+    if (localTracks.audioTrack) {
+      localTracks.audioTrack.stop();
+      localTracks.audioTrack.close();
+    }
+    if (localTracks.videoTrack) {
+      localTracks.videoTrack.stop();
+      localTracks.videoTrack.close();
+    }
+    await client.leave();
+    setStart(false);
+    navigate('/dashboard'); // Changed from '/' to '/dashboard'
   };
 
   const togglePresentation = async () => {
-    if (!isHost) return; // Only hosts can toggle presentation mode
-    
     const { data: { user } } = await supabase.auth.getUser();
     const newPresentationMode = !isPresentationMode;
     
+    console.log("Toggling presentation mode:", newPresentationMode);
+    
     if (presenceChannel.current) {
-      const trackData = {
+      console.log("Tracking new presentation state:", {
         isPresentationMode: newPresentationMode,
         currentImageIndex,
         userId: user?.id
-      };
-      await presenceChannel.current.track(trackData);
+      });
+      
+      await presenceChannel.current.track({
+        isPresentationMode: newPresentationMode,
+        currentImageIndex,
+        userId: user?.id
+      });
     }
     
     setIsPresentationMode(newPresentationMode);
@@ -402,23 +373,19 @@ const VideoRoom = () => {
   return (
     <div className="h-screen bg-apple-gray p-4">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
-        {isHost && (
-          <div className="bg-black/10 p-2 mb-4 rounded text-sm">
-            <p className="text-blue-600">Presentation Mode: {sharedState.isPresentationMode ? 'Active' : 'Inactive'}</p>
-            <p className="text-green-600">Current Image Index: {sharedState.currentImageIndex}</p>
-            <p className="text-purple-600">Presenter ID: {sharedState.presenterUserId || 'None'}</p>
-            <p className="text-orange-600">Current User ID: {currentUserId || 'Not logged in'}</p>
-            <p className="text-red-600">Is Presenter: {currentUserId === sharedState.presenterUserId ? 'Yes' : 'No'}</p>
-          </div>
-        )}
+        {/* Debug information */}
+        <div className="bg-black/10 p-2 mb-4 rounded text-sm">
+          <p className="text-blue-600">Presentation Mode: {sharedState.isPresentationMode ? 'Active' : 'Inactive'}</p>
+          <p className="text-green-600">Current Image Index: {sharedState.currentImageIndex}</p>
+          <p className="text-purple-600">Presenter ID: {sharedState.presenterUserId || 'None'}</p>
+        </div>
 
-        {/* Video grid */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
               <div ref={localPlayerRef} className="absolute inset-0"></div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
-                You {isHost ? '(Host)' : ''}
+                You
               </div>
             </div>
           )}
@@ -452,6 +419,7 @@ const VideoRoom = () => {
                 alt={`Presentation image ${sharedState.currentImageIndex + 1}`}
                 className="w-full h-[400px] object-contain rounded-lg"
               />
+              {/* Navigation buttons only visible to presenter */}
               {presentationImages.length > 1 && currentUserId === sharedState.presenterUserId && (
                 <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-4">
                   <Button
@@ -481,7 +449,6 @@ const VideoRoom = () => {
           </div>
         )}
 
-        {/* Controls */}
         <div className="flex justify-center gap-4 pb-8">
           <Button
             variant="outline"
@@ -507,16 +474,14 @@ const VideoRoom = () => {
               <VideoOff className="h-5 w-5 text-red-500" />
             )}
           </Button>
-          {isHost && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-full w-12 h-12 bg-white"
-              onClick={togglePresentation}
-            >
-              <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full w-12 h-12 bg-white"
+            onClick={togglePresentation}
+          >
+            <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
+          </Button>
           <Button
             variant="destructive"
             size="icon"
