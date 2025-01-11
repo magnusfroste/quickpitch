@@ -223,7 +223,7 @@ const VideoRoom = () => {
     }
     await client.leave();
     setStart(false);
-    navigate('/');
+    navigate('/dashboard'); // Changed from '/' to '/dashboard'
   };
 
   const togglePresentation = () => {
