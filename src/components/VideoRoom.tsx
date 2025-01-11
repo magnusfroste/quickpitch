@@ -274,8 +274,23 @@ const VideoRoom = () => {
       await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       console.log("Media permissions granted");
       
+      console.log("Getting Agora token...");
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-agora-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ channelName: name }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get Agora token');
+      }
+
+      const { token, uid } = await response.json();
       console.log("Joining channel:", name);
-      const uid = await client.join(appId, name, tempToken, null);
+      await client.join(appId, name, token, uid);
       console.log("Joined channel successfully. UID:", uid);
       
       console.log("Creating audio track...");
