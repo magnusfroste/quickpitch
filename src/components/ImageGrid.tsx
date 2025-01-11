@@ -24,14 +24,22 @@ export const ImageGrid = () => {
       .order('sort_order');
 
     if (error) {
+      console.error('Error fetching images:', error);
       toast.error('Failed to fetch images');
       return;
     }
 
+    console.log('Fetched images:', data); // Debug log
     setImages(data || []);
   };
 
   const handleDelete = async (id: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('You must be logged in to delete images');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('presentation_images')

@@ -170,16 +170,19 @@ const VideoRoom = () => {
   }, []);
 
   const fetchPresentationImages = async () => {
+    console.log('Fetching presentation images...'); // Debug log
     const { data, error } = await supabase
       .from('presentation_images')
       .select('*')
       .order('sort_order');
 
     if (error) {
+      console.error('Error fetching presentation images:', error);
       toast.error('Failed to fetch presentation images');
       return;
     }
 
+    console.log('Fetched presentation images:', data); // Debug log
     setPresentationImages(data || []);
   };
 
