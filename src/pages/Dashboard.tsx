@@ -21,7 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isHost] = useState(true);
-  const [channelName, setChannelName] = useState("lovable");
+  const [channelName, setChannelName] = useState("");
 
   const getMeetingUrl = () => {
     const baseUrl = window.location.origin;
