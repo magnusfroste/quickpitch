@@ -202,11 +202,16 @@ const VideoRoom = () => {
         await client.publish([audioTrack, videoTrack]);
         console.log("Local tracks published successfully");
 
-        // Set tracks first so the ref update trigger will have access to videoTrack
         setLocalTracks({ audioTrack, videoTrack });
         setStart(true);
         setMeetingStartTime(Date.now());
         setIsInitialized(true);
+
+        // Play the video track immediately if the ref is ready
+        if (localPlayerRef.current) {
+          console.log("Playing video track in local player");
+          videoTrack.play(localPlayerRef.current);
+        }
       } catch (error) {
         console.error("Error during initialization:", error);
         if (error instanceof Error) {
@@ -262,9 +267,10 @@ const VideoRoom = () => {
     };
   }, [channelName, isLoading, isInitialized, navigate]);
 
-  // Add new effect to handle video playback when ref is ready
+  // Add effect to handle video playback when ref becomes available
   useEffect(() => {
     if (localPlayerRef.current && localTracks.videoTrack) {
+      console.log("Playing video track in local player (ref update)");
       localTracks.videoTrack.play(localPlayerRef.current);
     }
   }, [localPlayerRef.current, localTracks.videoTrack]);
@@ -493,8 +499,8 @@ const VideoRoom = () => {
         
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
-            <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
-              <div ref={localPlayerRef} className="absolute inset-0 bg-black"></div>
+            <div className="relative bg-black rounded-2xl overflow-hidden shadow-lg h-[300px]">
+              <div ref={localPlayerRef} className="absolute inset-0"></div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
               </div>
