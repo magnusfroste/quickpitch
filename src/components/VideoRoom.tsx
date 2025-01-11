@@ -30,6 +30,7 @@ const VideoRoom = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const localPlayerRef = useRef<HTMLDivElement>(null);
   const presenceChannel = useRef<any>(null);
+  const initializingRef = useRef(false);
   const [sharedState, setSharedState] = useState<{
     isPresentationMode: boolean;
     currentImageIndex: number;
@@ -111,38 +112,7 @@ const VideoRoom = () => {
         });
     };
 
-    const initializeAgora = async () => {
-      try {
-        console.log("Initializing Agora client...");
-        
-        // Remove any existing event listeners before adding new ones
-        client.removeAllListeners();
-        
-        // Add event listeners
-        client.on("user-published", handleUserPublished);
-        client.on("user-unpublished", handleUserUnpublished);
-        client.on("user-left", handleUserLeft);
-
-        // Ensure client is not connected before joining
-        if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
-          console.log("Client already connected, leaving channel first...");
-          await client.leave();
-        }
-
-        await init(channelName);
-      } catch (error) {
-        console.error("Error initializing Agora:", error);
-        toast.error("Failed to initialize video conference");
-        if (isHost) {
-          navigate('/dashboard');
-        }
-      }
-    };
-
-    initializePresenceChannel();
-    initializeAgora();
-
-    return () => {
+    const cleanup = async () => {
       console.log("Cleaning up...");
       if (localTracks.audioTrack) {
         localTracks.audioTrack.stop();
@@ -152,14 +122,59 @@ const VideoRoom = () => {
         localTracks.videoTrack.stop();
         localTracks.videoTrack.close();
       }
+      
+      // Reset local tracks state
+      setLocalTracks({ audioTrack: null, videoTrack: null });
+      setStart(false);
+      
+      // Clean up Agora client
       client.removeAllListeners();
-      client.leave().catch((err) => {
-        console.error("Error leaving channel:", err);
-      });
-      if (presenceChannel.current) {
-        presenceChannel.current.untrack();
-        supabase.removeChannel(presenceChannel.current);
+      try {
+        if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
+          await client.leave();
+        }
+      } catch (err) {
+        console.error("Error during cleanup:", err);
       }
+      
+      // Clean up Supabase
+      if (presenceChannel.current) {
+        await presenceChannel.current.untrack();
+        await supabase.removeChannel(presenceChannel.current);
+      }
+    };
+
+    const initializeAgora = async () => {
+      if (initializingRef.current) return;
+      initializingRef.current = true;
+
+      try {
+        console.log("Initializing Agora client...");
+        await cleanup();
+        
+        // Add event listeners
+        client.on("user-published", handleUserPublished);
+        client.on("user-unpublished", handleUserUnpublished);
+        client.on("user-left", handleUserLeft);
+
+        await init(channelName);
+        
+      } catch (error) {
+        console.error("Error initializing Agora:", error);
+        toast.error("Failed to initialize video conference");
+        if (isHost) {
+          navigate('/dashboard');
+        }
+      } finally {
+        initializingRef.current = false;
+      }
+    };
+
+    initializePresenceChannel();
+    initializeAgora();
+
+    return () => {
+      cleanup();
     };
   }, [channelName, isHost]);
 
@@ -254,6 +269,7 @@ const VideoRoom = () => {
       if (isHost) {
         navigate('/dashboard');
       }
+      throw error;
     }
   };
 
