@@ -38,6 +38,15 @@ const VideoRoom = () => {
     isPresentationMode: false,
     currentImageIndex: 0
   });
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+    getCurrentUser();
+  }, []);
 
   useEffect(() => {
     if (!channelName) {
@@ -379,10 +388,7 @@ const VideoRoom = () => {
                 className="w-full h-[400px] object-contain rounded-lg"
               />
               {/* Navigation buttons only visible to presenter */}
-              {presentationImages.length > 1 && sharedState.presenterUserId === (async () => {
-                const { data: { user } } = await supabase.auth.getUser();
-                return user?.id;
-              })() && (
+              {presentationImages.length > 1 && sharedState.presenterUserId === currentUserId && (
                 <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-4">
                   <Button
                     variant="outline"
