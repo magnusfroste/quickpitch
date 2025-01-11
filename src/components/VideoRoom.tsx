@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
 import { MeetingTimer } from "./MeetingTimer";
 
-// Remove hardcoded app ID and use environment variable
 const appId = import.meta.env.VITE_AGORA_APP_ID;
 
 const client = AgoraRTC.createClient({ 
@@ -44,6 +43,18 @@ const VideoRoom = () => {
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
+
+  useEffect(() => {
+    const checkIfHost = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+        // For now, let's make everyone a host to test presentation features
+        setIsHost(true);
+      }
+    };
+    checkIfHost();
+  }, []);
 
   useEffect(() => {
     if (!channelName) {
@@ -222,29 +233,31 @@ const VideoRoom = () => {
       
       if (mediaType === "video") {
         setUsers(prevUsers => {
-          // Only add the user if they're not already in the list
           if (!prevUsers.find(u => u.uid === user.uid)) {
-            console.log("Adding user to video grid:", user.uid);
             return [...prevUsers, user];
           }
           return prevUsers;
         });
 
-        // Ensure we have a container for this user's video
+        // Create a new div element for this user's video if it doesn't exist
         if (!userVideoRefs.current[user.uid]) {
-          userVideoRefs.current[user.uid] = document.createElement('div');
+          const videoContainer = document.createElement('div');
+          videoContainer.style.width = '100%';
+          videoContainer.style.height = '100%';
+          userVideoRefs.current[user.uid] = videoContainer;
         }
 
-        // Clear the container before playing
+        // Clear the container and play the video
         if (userVideoRefs.current[user.uid]) {
-          userVideoRefs.current[user.uid]!.innerHTML = '';
-          console.log("Playing remote video for user:", user.uid);
-          user.videoTrack?.play(userVideoRefs.current[user.uid]);
+          const container = userVideoRefs.current[user.uid];
+          if (container) {
+            container.innerHTML = '';
+            user.videoTrack?.play(container);
+          }
         }
       }
       
       if (mediaType === "audio") {
-        console.log("Playing remote audio:", user.uid);
         user.audioTrack?.play();
       }
     } catch (error) {
@@ -437,7 +450,16 @@ const VideoRoom = () => {
               className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]"
             >
               <div
-                ref={el => userVideoRefs.current[user.uid] = el}
+                ref={el => {
+                  if (el) {
+                    userVideoRefs.current[user.uid] = el;
+                    // Replay the video when the ref is set
+                    if (user.videoTrack) {
+                      el.innerHTML = '';
+                      user.videoTrack.play(el);
+                    }
+                  }
+                }}
                 className="absolute inset-0"
               />
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
