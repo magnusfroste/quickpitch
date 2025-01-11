@@ -71,6 +71,7 @@ const VideoRoom = () => {
           const state = presenceChannel.current.presenceState();
           console.log("Presence state updated:", state);
           
+          // Find any presenter in the room
           const presenterState = Object.values(state).find((presences: any) => 
             presences.some((presence: any) => presence.isPresentationMode)
           );
@@ -78,15 +79,17 @@ const VideoRoom = () => {
           if (presenterState) {
             const presenter = presenterState[0];
             setSharedState({
-              isPresentationMode: true,
+              isPresentationMode: presenter.isPresentationMode,
               currentImageIndex: presenter.currentImageIndex || 0,
               presenterUserId: presenter.userId
             });
+            setIsPresentationMode(presenter.isPresentationMode);
           } else {
             setSharedState({
               isPresentationMode: false,
               currentImageIndex: 0
             });
+            setIsPresentationMode(false);
           }
         })
         .subscribe(async (status: string) => {
@@ -304,44 +307,49 @@ const VideoRoom = () => {
 
   const togglePresentation = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    const newPresentationMode = !sharedState.isPresentationMode;
+    const newPresentationMode = !isPresentationMode;
     
     if (presenceChannel.current) {
       await presenceChannel.current.track({
         isPresentationMode: newPresentationMode,
-        currentImageIndex: 0,
+        currentImageIndex: currentImageIndex,
         userId: user?.id
       });
     }
     
+    setIsPresentationMode(newPresentationMode);
     toast.success(newPresentationMode ? 'Presentation started' : 'Presentation ended');
   };
 
   const nextImage = async () => {
-    if (sharedState.currentImageIndex < presentationImages.length - 1) {
-      const newIndex = sharedState.currentImageIndex + 1;
+    if (currentImageIndex < presentationImages.length - 1) {
+      const newIndex = currentImageIndex + 1;
       setCurrentImageIndex(newIndex);
       
       const { data: { user } } = await supabase.auth.getUser();
-      presenceChannel.current?.track({
-        isPresentationMode: true,
-        currentImageIndex: newIndex,
-        userId: user?.id
-      });
+      if (presenceChannel.current) {
+        await presenceChannel.current.track({
+          isPresentationMode: true,
+          currentImageIndex: newIndex,
+          userId: user?.id
+        });
+      }
     }
   };
 
   const previousImage = async () => {
-    if (sharedState.currentImageIndex > 0) {
-      const newIndex = sharedState.currentImageIndex - 1;
+    if (currentImageIndex > 0) {
+      const newIndex = currentImageIndex - 1;
       setCurrentImageIndex(newIndex);
       
       const { data: { user } } = await supabase.auth.getUser();
-      presenceChannel.current?.track({
-        isPresentationMode: true,
-        currentImageIndex: newIndex,
-        userId: user?.id
-      });
+      if (presenceChannel.current) {
+        await presenceChannel.current.track({
+          isPresentationMode: true,
+          currentImageIndex: newIndex,
+          userId: user?.id
+        });
+      }
     }
   };
 
