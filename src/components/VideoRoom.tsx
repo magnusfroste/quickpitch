@@ -43,20 +43,31 @@ const VideoRoom = () => {
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkIfHost = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+    const checkAuth = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+          toast.error("Please login to join the meeting");
+          navigate('/login');
+          return;
+        }
         setCurrentUserId(user.id);
-        // For now, let's make everyone a host to test presentation features
-        setIsHost(true);
+        setIsHost(true); // For testing, keeping everyone as host
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Auth check error:", error);
+        toast.error("Authentication error");
+        navigate('/login');
       }
     };
-    checkIfHost();
-  }, []);
+    checkAuth();
+  }, [navigate]);
 
   useEffect(() => {
+    if (isLoading) return; // Don't initialize until auth check is complete
     if (!channelName) {
       toast.error("Invalid channel name");
       navigate('/dashboard');
@@ -200,29 +211,13 @@ const VideoRoom = () => {
         presenceChannel.current.untrack();
         supabase.removeChannel(presenceChannel.current);
       }
-      // Clean up video containers
       Object.keys(userVideoRefs.current).forEach(uid => {
         if (userVideoRefs.current[uid]) {
           userVideoRefs.current[uid]!.innerHTML = '';
         }
       });
     };
-  }, [channelName]);
-
-  useEffect(() => {
-    fetchPresentationImages();
-  }, []);
-
-  useEffect(() => {
-    if (localTracks.videoTrack && localPlayerRef.current && start) {
-      console.log("Updating local video display");
-      localPlayerRef.current.innerHTML = '';
-      localTracks.videoTrack.play(localPlayerRef.current, { 
-        fit: "cover",
-        mirror: true 
-      });
-    }
-  }, [localTracks.videoTrack, start]);
+  }, [channelName, isLoading, navigate]);
 
   const handleUserPublished = async (user: any, mediaType: any) => {
     console.log("Remote user published:", user.uid, mediaType);
@@ -239,7 +234,6 @@ const VideoRoom = () => {
           return prevUsers;
         });
 
-        // Create a new div element for this user's video if it doesn't exist
         if (!userVideoRefs.current[user.uid]) {
           const videoContainer = document.createElement('div');
           videoContainer.style.width = '100%';
@@ -247,7 +241,6 @@ const VideoRoom = () => {
           userVideoRefs.current[user.uid] = videoContainer;
         }
 
-        // Clear the container and play the video
         if (userVideoRefs.current[user.uid]) {
           const container = userVideoRefs.current[user.uid];
           if (container) {
@@ -273,7 +266,6 @@ const VideoRoom = () => {
       }
     }
     if (mediaType === "video") {
-      // Clear the video container
       if (userVideoRefs.current[user.uid]) {
         userVideoRefs.current[user.uid]!.innerHTML = '';
       }
@@ -285,7 +277,6 @@ const VideoRoom = () => {
 
   const handleUserLeft = (user: any) => {
     console.log("Remote user left:", user.uid);
-    // Clear the video container
     if (userVideoRefs.current[user.uid]) {
       userVideoRefs.current[user.uid]!.innerHTML = '';
       delete userVideoRefs.current[user.uid];
@@ -356,7 +347,6 @@ const VideoRoom = () => {
       localTracks.videoTrack.close();
     }
     
-    // Clean up all video containers
     Object.keys(userVideoRefs.current).forEach(uid => {
       if (userVideoRefs.current[uid]) {
         userVideoRefs.current[uid]!.innerHTML = '';
@@ -422,6 +412,14 @@ const VideoRoom = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="h-screen bg-apple-gray flex items-center justify-center">
+        <div className="text-lg text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-apple-gray p-4">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
@@ -453,7 +451,6 @@ const VideoRoom = () => {
                 ref={el => {
                   if (el) {
                     userVideoRefs.current[user.uid] = el;
-                    // Replay the video when the ref is set
                     if (user.videoTrack) {
                       el.innerHTML = '';
                       user.videoTrack.play(el);
