@@ -84,6 +84,8 @@ const VideoRoom = () => {
               currentImageIndex: presenter.currentImageIndex,
               presenterUserId: presenter.userId
             });
+            setIsPresentationMode(presenter.isPresentationMode);
+            setCurrentImageIndex(presenter.currentImageIndex);
           } else {
             console.log("No presenter found");
             setSharedState({
@@ -91,6 +93,8 @@ const VideoRoom = () => {
               currentImageIndex: 0,
               presenterUserId: undefined
             });
+            setIsPresentationMode(false);
+            setCurrentImageIndex(0);
           }
         })
         .subscribe(async (status: string) => {
