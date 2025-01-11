@@ -30,6 +30,49 @@ const VideoRoom = () => {
   const localPlayerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!channelName) {
+      toast.error("Invalid channel name");
+      navigate('/dashboard');
+      return;
+    }
+
+    const initializeAgora = async () => {
+      try {
+        console.log("Initializing Agora client...");
+        client.on("user-published", handleUserPublished);
+        client.on("user-unpublished", handleUserUnpublished);
+        client.on("user-left", handleUserLeft);
+        await init(channelName);
+      } catch (error) {
+        console.error("Error initializing Agora:", error);
+        toast.error("Failed to initialize video conference");
+        navigate('/dashboard');
+      }
+    };
+
+    initializeAgora();
+
+    return () => {
+      console.log("Cleaning up...");
+      if (localTracks.audioTrack) {
+        localTracks.audioTrack.stop();
+        localTracks.audioTrack.close();
+      }
+      if (localTracks.videoTrack) {
+        localTracks.videoTrack.stop();
+        localTracks.videoTrack.close();
+      }
+      client.off("user-published", handleUserPublished);
+      client.off("user-unpublished", handleUserUnpublished);
+      client.off("user-left", handleUserLeft);
+      client.leave().catch((err) => {
+        console.error("Error leaving channel:", err);
+      });
+      console.log("Cleanup complete");
+    };
+  }, [channelName]);
+
+  useEffect(() => {
     fetchPresentationImages();
   }, []);
 
@@ -83,14 +126,9 @@ const VideoRoom = () => {
     });
   };
 
-  let init = async (name: string) => {
-    console.log("Initializing Agora client...");
-    client.on("user-published", handleUserPublished);
-    client.on("user-unpublished", handleUserUnpublished);
-    client.on("user-left", handleUserLeft);
-
+  const init = async (name: string) => {
+    console.log("Requesting media permissions...");
     try {
-      console.log("Requesting media permissions...");
       await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       console.log("Media permissions granted");
       
@@ -123,7 +161,6 @@ const VideoRoom = () => {
       
       if (videoTrack && localPlayerRef.current) {
         console.log("Playing local video track");
-        // Clear any existing content and play
         localPlayerRef.current.innerHTML = '';
         videoTrack.play(localPlayerRef.current, { 
           fit: "cover",
@@ -146,42 +183,9 @@ const VideoRoom = () => {
       } else {
         toast.error("Failed to join the meeting");
       }
+      navigate('/dashboard');
     }
   };
-
-  init(channelName);
-
-  useEffect(() => {
-    return () => {
-      console.log("Cleaning up...");
-      if (localTracks.audioTrack) {
-        localTracks.audioTrack.stop();
-        localTracks.audioTrack.close();
-      }
-      if (localTracks.videoTrack) {
-        localTracks.videoTrack.stop();
-        localTracks.videoTrack.close();
-      }
-      client.off("user-published", handleUserPublished);
-      client.off("user-unpublished", handleUserUnpublished);
-      client.off("user-left", handleUserLeft);
-      client.leave().catch((err) => {
-        console.error("Error leaving channel:", err);
-      });
-      console.log("Cleanup complete");
-    };
-  }, [channelName]);
-
-  // Effect to handle video track updates
-  useEffect(() => {
-    if (localTracks.videoTrack && localPlayerRef.current && start) {
-      localPlayerRef.current.innerHTML = '';
-      localTracks.videoTrack.play(localPlayerRef.current, { 
-        fit: "cover",
-        mirror: true 
-      });
-    }
-  }, [localTracks.videoTrack, start]);
 
   const mute = async (type: "audio" | "video") => {
     try {
