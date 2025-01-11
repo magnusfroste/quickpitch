@@ -48,10 +48,7 @@ const Index = () => {
       toast.error("Please enter a meeting code");
       return;
     }
-    if (channelName !== "lovable") {
-      toast.error("Invalid meeting code. Please use 'lovable'");
-      return;
-    }
+    // Remove the validation that restricts to "lovable"
     navigate(`/meeting/${channelName}`);
   };
 
