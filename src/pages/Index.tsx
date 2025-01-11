@@ -5,14 +5,7 @@ import VideoRoom from "@/components/VideoRoom";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Copy, Share2, LogOut, Video, Users, Shield } from "lucide-react";
+import { LogOut, Video, Users, Shield } from "lucide-react";
 
 const Index = () => {
   const [channelName, setChannelName] = useState("");
@@ -38,47 +31,13 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const generateMeetingCode = () => {
+  const handleHostMeeting = () => {
     if (!user) {
       toast.error("Please login to host a meeting");
       navigate("/login");
       return;
     }
-    setChannelName("lovable");
-    return "lovable";
-  };
-
-  const getMeetingUrl = () => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}?meeting=${channelName}`;
-  };
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success("Meeting link copied to clipboard!");
-    } catch (err) {
-      toast.error("Failed to copy meeting link");
-    }
-  };
-
-  const shareMeeting = async () => {
-    const meetingUrl = getMeetingUrl();
-    const shareData = {
-      title: "Join my video meeting",
-      text: "Join my video meeting",
-      url: meetingUrl,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        throw new Error("Web Share API not supported");
-      }
-    } catch (err) {
-      copyToClipboard(meetingUrl);
-    }
+    navigate("/dashboard");
   };
 
   const handleLogout = async () => {
@@ -145,49 +104,13 @@ const Index = () => {
                 >
                   Join Meeting
                 </Button>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={generateMeetingCode}
-                      className="flex-1 h-12 text-lg"
-                    >
-                      Host Meeting
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Share Meeting Link</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-lg">
-                        <span className="flex-1 font-mono text-sm truncate">
-                          {getMeetingUrl()}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(getMeetingUrl())}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={shareMeeting}
-                        >
-                          <Share2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Button
-                        onClick={joinMeeting}
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                      >
-                        Join Meeting
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  variant="outline"
+                  onClick={handleHostMeeting}
+                  className="flex-1 h-12 text-lg"
+                >
+                  Host Meeting
+                </Button>
               </div>
             </div>
           </div>
