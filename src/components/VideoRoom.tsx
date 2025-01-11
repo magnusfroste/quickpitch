@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Presentation } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useParams, useNavigate } from "react-router-dom";
 
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
 const tempToken = "007eJxTYNh1qWMKg0Qqx3vDkDeva7mnJKUYzdp3c4KGauc1jUYe5VgFhjRT8+Qk08Q0YwuzRJPURFNL08QUSzMzixTLJFMjo8Rkk0mN6Q2BjAyLDG+yMjJAIIjPzpCTX5aYlJPKwAAAVwcfkg==";
@@ -14,12 +15,9 @@ const client = AgoraRTC.createClient({
   role: "host"
 });
 
-interface VideoRoomProps {
-  channelName: string;
-  onLeave?: () => void;
-}
-
-const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
+const VideoRoom = () => {
+  const { channelName } = useParams();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [start, setStart] = useState<boolean>(false);
   const [localTracks, setLocalTracks] = useState<{
@@ -97,7 +95,7 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
       console.log("Media permissions granted");
       
       console.log("Joining channel:", name);
-      const uid = await client.join(appId, "lovable", tempToken, null);
+      const uid = await client.join(appId, name, tempToken, null);
       console.log("Joined channel successfully. UID:", uid);
       
       console.log("Creating audio track...");
@@ -225,7 +223,7 @@ const VideoRoom = ({ channelName, onLeave }: VideoRoomProps) => {
     }
     await client.leave();
     setStart(false);
-    onLeave?.();
+    navigate('/');
   };
 
   const togglePresentation = () => {

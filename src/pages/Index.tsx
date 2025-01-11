@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import VideoRoom from "@/components/VideoRoom";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +8,6 @@ import { LogOut, Video, Users, Shield } from "lucide-react";
 
 const Index = () => {
   const [channelName, setChannelName] = useState("");
-  const [inCall, setInCall] = useState(false);
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
@@ -54,16 +52,11 @@ const Index = () => {
       toast.error("Invalid meeting code. Please use 'lovable'");
       return;
     }
-    setInCall(true);
+    navigate(`/meeting/${channelName}`);
   };
-
-  if (inCall) {
-    return <VideoRoom channelName={channelName} onLeave={() => setInCall(false)} />;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900">
@@ -126,7 +119,7 @@ const Index = () => {
           </div>
         </div>
       </div>
-
+      
       {/* Features Section */}
       <div className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
