@@ -9,6 +9,10 @@ import { MeetingTimer } from "./MeetingTimer";
 
 const appId = import.meta.env.VITE_AGORA_APP_ID;
 
+if (!appId) {
+  console.error("Missing VITE_AGORA_APP_ID environment variable");
+}
+
 const client = AgoraRTC.createClient({ 
   mode: "rtc", 
   codec: "vp8",
@@ -44,17 +48,28 @@ const VideoRoom = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session error:", error);
+          toast.error("Authentication error");
+          navigate('/login');
+          return;
+        }
+
+        if (!session) {
+          console.log("No active session");
           toast.error("Please login to join the meeting");
           navigate('/login');
           return;
         }
-        setCurrentUserId(user.id);
+
+        setCurrentUserId(session.user.id);
         setIsHost(true); // For testing, keeping everyone as host
         setIsLoading(false);
       } catch (error) {
@@ -63,67 +78,82 @@ const VideoRoom = () => {
         navigate('/login');
       }
     };
+
     checkAuth();
   }, [navigate]);
 
   useEffect(() => {
-    if (isLoading) return; // Don't initialize until auth check is complete
+    if (isLoading || isInitialized) return;
+
     if (!channelName) {
       toast.error("Invalid channel name");
       navigate('/dashboard');
       return;
     }
 
-    const initializePresenceChannel = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const channelId = `room:${channelName}`;
-      presenceChannel.current = supabase.channel(channelId, {
-        config: {
-          presence: {
-            key: user?.id,
-          },
-        },
-      });
+    if (!appId) {
+      toast.error("Missing Agora App ID configuration");
+      navigate('/dashboard');
+      return;
+    }
 
-      presenceChannel.current
-        .on('presence', { event: 'sync' }, () => {
-          const state = presenceChannel.current.presenceState();
-          console.log("Presence state updated:", state);
-          
-          const presenterState = Object.values(state).find((presences: any) => 
-            presences.some((presence: any) => presence.isPresentationMode)
-          );
-          
-          if (presenterState) {
-            const presenter = presenterState[0];
-            setSharedState({
-              isPresentationMode: presenter.isPresentationMode,
-              currentImageIndex: presenter.currentImageIndex,
-              presenterUserId: presenter.userId
-            });
-            setIsPresentationMode(presenter.isPresentationMode);
-            setCurrentImageIndex(presenter.currentImageIndex);
-          } else {
-            setSharedState({
-              isPresentationMode: false,
-              currentImageIndex: 0,
-              presenterUserId: undefined
-            });
-            setIsPresentationMode(false);
-            setCurrentImageIndex(0);
-          }
-        })
-        .subscribe(async (status: string) => {
-          if (status === 'SUBSCRIBED') {
-            const { data: { user } } = await supabase.auth.getUser();
-            await presenceChannel.current.track({
-              isPresentationMode: false,
-              currentImageIndex: 0,
-              userId: user?.id
-            });
-          }
+    const initializePresenceChannel = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error("No active session");
+        }
+        
+        const channelId = `room:${channelName}`;
+        presenceChannel.current = supabase.channel(channelId, {
+          config: {
+            presence: {
+              key: session.user.id,
+            },
+          },
         });
+
+        presenceChannel.current
+          .on('presence', { event: 'sync' }, () => {
+            const state = presenceChannel.current.presenceState();
+            console.log("Presence state updated:", state);
+            
+            const presenterState = Object.values(state).find((presences: any) => 
+              presences.some((presence: any) => presence.isPresentationMode)
+            );
+            
+            if (presenterState) {
+              const presenter = presenterState[0];
+              setSharedState({
+                isPresentationMode: presenter.isPresentationMode,
+                currentImageIndex: presenter.currentImageIndex,
+                presenterUserId: presenter.userId
+              });
+              setIsPresentationMode(presenter.isPresentationMode);
+              setCurrentImageIndex(presenter.currentImageIndex);
+            } else {
+              setSharedState({
+                isPresentationMode: false,
+                currentImageIndex: 0,
+                presenterUserId: undefined
+              });
+              setIsPresentationMode(false);
+              setCurrentImageIndex(0);
+            }
+          })
+          .subscribe(async (status: string) => {
+            if (status === 'SUBSCRIBED') {
+              await presenceChannel.current.track({
+                isPresentationMode: false,
+                currentImageIndex: 0,
+                userId: session.user.id
+              });
+            }
+          });
+      } catch (error) {
+        console.error("Error initializing presence channel:", error);
+        toast.error("Failed to initialize presence channel");
+      }
     };
 
     const getAgoraToken = async () => {
@@ -169,11 +199,16 @@ const VideoRoom = () => {
           optimizationMode: "detail"
         });
 
+        if (localPlayerRef.current) {
+          videoTrack.play(localPlayerRef.current);
+        }
+
         await client.publish([audioTrack, videoTrack]);
 
         setLocalTracks({ audioTrack, videoTrack });
         setStart(true);
         setMeetingStartTime(Date.now());
+        setIsInitialized(true);
       } catch (error) {
         console.error("Error during initialization:", error);
         if (error instanceof Error) {
@@ -189,8 +224,18 @@ const VideoRoom = () => {
       }
     };
 
-    initializePresenceChannel();
-    initializeAgora();
+    const initialize = async () => {
+      try {
+        await initializePresenceChannel();
+        await initializeAgora();
+      } catch (error) {
+        console.error("Initialization error:", error);
+        toast.error("Failed to initialize meeting");
+        navigate('/dashboard');
+      }
+    };
+
+    initialize();
 
     return () => {
       if (localTracks.audioTrack) {
@@ -217,7 +262,7 @@ const VideoRoom = () => {
         }
       });
     };
-  }, [channelName, isLoading, navigate]);
+  }, [channelName, isLoading, isInitialized, navigate]);
 
   const handleUserPublished = async (user: any, mediaType: any) => {
     console.log("Remote user published:", user.uid, mediaType);
@@ -356,8 +401,8 @@ const VideoRoom = () => {
     await client.leave();
     setStart(false);
     
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
       navigate('/dashboard');
     } else {
       navigate('/');
@@ -365,14 +410,14 @@ const VideoRoom = () => {
   };
 
   const togglePresentation = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
     const newPresentationMode = !isPresentationMode;
     
     if (presenceChannel.current) {
       await presenceChannel.current.track({
         isPresentationMode: newPresentationMode,
         currentImageIndex,
-        userId: user?.id
+        userId: session?.user.id
       });
     }
     
@@ -385,12 +430,12 @@ const VideoRoom = () => {
       const newIndex = currentImageIndex + 1;
       setCurrentImageIndex(newIndex);
       
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       if (presenceChannel.current) {
         await presenceChannel.current.track({
           isPresentationMode: true,
           currentImageIndex: newIndex,
-          userId: user?.id
+          userId: session?.user.id
         });
       }
     }
@@ -401,12 +446,12 @@ const VideoRoom = () => {
       const newIndex = currentImageIndex - 1;
       setCurrentImageIndex(newIndex);
       
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       if (presenceChannel.current) {
         await presenceChannel.current.track({
           isPresentationMode: true,
           currentImageIndex: newIndex,
-          userId: user?.id
+          userId: session?.user.id
         });
       }
     }
