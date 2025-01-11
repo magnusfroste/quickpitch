@@ -32,6 +32,7 @@ const VideoRoom = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const localPlayerRef = useRef<HTMLDivElement>(null);
   const presenceChannel = useRef<any>(null);
+  const userVideoRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [sharedState, setSharedState] = useState<{
     isPresentationMode: boolean;
     currentImageIndex: number;
@@ -187,17 +188,22 @@ const VideoRoom = () => {
         presenceChannel.current.untrack();
         supabase.removeChannel(presenceChannel.current);
       }
+      // Clean up video containers
+      Object.keys(userVideoRefs.current).forEach(uid => {
+        if (userVideoRefs.current[uid]) {
+          userVideoRefs.current[uid]!.innerHTML = '';
+        }
+      });
     };
   }, [channelName]);
 
-  const handleTimeUp = () => {
-    toast.warning("Meeting time limit reached (20 minutes)");
-    leaveChannel();
-  };
+  useEffect(() => {
+    fetchPresentationImages();
+  }, []);
 
   useEffect(() => {
     if (localTracks.videoTrack && localPlayerRef.current && start) {
-      console.log("Updating video display");
+      console.log("Updating local video display");
       localPlayerRef.current.innerHTML = '';
       localTracks.videoTrack.play(localPlayerRef.current, { 
         fit: "cover",
@@ -206,12 +212,77 @@ const VideoRoom = () => {
     }
   }, [localTracks.videoTrack, start]);
 
-  useEffect(() => {
-    fetchPresentationImages();
-  }, []);
+  const handleUserPublished = async (user: any, mediaType: any) => {
+    console.log("Remote user published:", user.uid, mediaType);
+    
+    try {
+      await client.subscribe(user, mediaType);
+      console.log("Subscribed to remote user:", user.uid, mediaType);
+      
+      if (mediaType === "video") {
+        setUsers(prevUsers => {
+          // Only add the user if they're not already in the list
+          if (!prevUsers.find(u => u.uid === user.uid)) {
+            console.log("Adding user to video grid:", user.uid);
+            return [...prevUsers, user];
+          }
+          return prevUsers;
+        });
+
+        // Ensure we have a container for this user's video
+        if (!userVideoRefs.current[user.uid]) {
+          userVideoRefs.current[user.uid] = document.createElement('div');
+        }
+
+        // Clear the container before playing
+        if (userVideoRefs.current[user.uid]) {
+          userVideoRefs.current[user.uid]!.innerHTML = '';
+          console.log("Playing remote video for user:", user.uid);
+          user.videoTrack?.play(userVideoRefs.current[user.uid]);
+        }
+      }
+      
+      if (mediaType === "audio") {
+        console.log("Playing remote audio:", user.uid);
+        user.audioTrack?.play();
+      }
+    } catch (error) {
+      console.error("Error handling user published:", error);
+    }
+  };
+
+  const handleUserUnpublished = (user: any, mediaType: any) => {
+    console.log("Remote user unpublished:", user.uid, mediaType);
+    if (mediaType === "audio") {
+      if (user.audioTrack) {
+        user.audioTrack.stop();
+      }
+    }
+    if (mediaType === "video") {
+      // Clear the video container
+      if (userVideoRefs.current[user.uid]) {
+        userVideoRefs.current[user.uid]!.innerHTML = '';
+      }
+      setUsers((prevUsers) => {
+        return prevUsers.filter((User) => User.uid !== user.uid);
+      });
+    }
+  };
+
+  const handleUserLeft = (user: any) => {
+    console.log("Remote user left:", user.uid);
+    // Clear the video container
+    if (userVideoRefs.current[user.uid]) {
+      userVideoRefs.current[user.uid]!.innerHTML = '';
+      delete userVideoRefs.current[user.uid];
+    }
+    setUsers((prevUsers) => {
+      return prevUsers.filter((User) => User.uid !== user.uid);
+    });
+  };
 
   const fetchPresentationImages = async () => {
-    console.log('Fetching presentation images...'); // Debug log
+    console.log('Fetching presentation images...');
     const { data, error } = await supabase
       .from('presentation_images')
       .select('*')
@@ -223,106 +294,13 @@ const VideoRoom = () => {
       return;
     }
 
-    console.log('Fetched presentation images:', data); // Debug log
+    console.log('Fetched presentation images:', data);
     setPresentationImages(data || []);
   };
 
-  const handleUserPublished = async (user: any, mediaType: any) => {
-    console.log("Remote user published:", user.uid, mediaType);
-    await client.subscribe(user, mediaType);
-    console.log("Subscribed to remote user:", user.uid, mediaType);
-    
-    if (mediaType === "video") {
-      setUsers((prevUsers) => {
-        console.log("Adding user to video grid:", user.uid);
-        return [...prevUsers, user];
-      });
-    }
-    if (mediaType === "audio") {
-      console.log("Playing remote audio:", user.uid);
-      user.audioTrack?.play();
-    }
-  };
-
-  const handleUserUnpublished = (user: any, mediaType: any) => {
-    console.log("Remote user unpublished:", user.uid, mediaType);
-    if (mediaType === "audio") {
-      user.audioTrack?.stop();
-    }
-    if (mediaType === "video") {
-      setUsers((prevUsers) => {
-        return prevUsers.filter((User) => User.uid !== user.uid);
-      });
-    }
-  };
-
-  const handleUserLeft = (user: any) => {
-    console.log("Remote user left:", user.uid);
-    setUsers((prevUsers) => {
-      return prevUsers.filter((User) => User.uid !== user.uid);
-    });
-  };
-
-  const init = async (name: string) => {
-    console.log("Requesting media permissions...");
-    try {
-      await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      console.log("Media permissions granted");
-      
-      console.log("Getting Agora token...");
-      const { data, error } = await supabase.functions.invoke('generate-agora-token', {
-        body: { channelName: name }
-      });
-
-      if (error) {
-        throw new Error('Failed to get Agora token');
-      }
-
-      const { token, uid } = data;
-      console.log("Joining channel:", name);
-      await client.join(appId, name, token, uid);
-      console.log("Joined channel successfully. UID:", uid);
-      
-      console.log("Creating audio track...");
-      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
-        encoderConfig: "music_standard"
-      });
-      console.log("Audio track created");
-      
-      console.log("Creating video track...");
-      const videoTrack = await AgoraRTC.createCameraVideoTrack({
-        encoderConfig: {
-          width: 640,
-          height: 480,
-          frameRate: 30,
-          bitrateMin: 400,
-          bitrateMax: 1000,
-        },
-        optimizationMode: "detail"
-      });
-      console.log("Video track created");
-
-      console.log("Publishing tracks to channel...");
-      await client.publish([audioTrack, videoTrack]);
-      console.log("Tracks published successfully");
-
-      setLocalTracks({ audioTrack, videoTrack });
-      setStart(true);
-      
-      console.log("Setup complete");
-    } catch (error) {
-      console.error("Error during initialization:", error);
-      if (error instanceof Error) {
-        if (error.name === "NotAllowedError") {
-          toast.error("Please allow camera and microphone access to join the meeting");
-        } else {
-          toast.error("Failed to join the meeting: " + error.message);
-        }
-      } else {
-        toast.error("Failed to join the meeting");
-      }
-      navigate('/dashboard');
-    }
+  const handleTimeUp = () => {
+    toast.warning("Meeting time limit reached (20 minutes)");
+    leaveChannel();
   };
 
   const mute = async (type: "audio" | "video") => {
@@ -363,6 +341,14 @@ const VideoRoom = () => {
       localTracks.videoTrack.stop();
       localTracks.videoTrack.close();
     }
+    
+    // Clean up all video containers
+    Object.keys(userVideoRefs.current).forEach(uid => {
+      if (userVideoRefs.current[uid]) {
+        userVideoRefs.current[uid]!.innerHTML = '';
+      }
+    });
+    
     await client.leave();
     setStart(false);
     
@@ -378,15 +364,7 @@ const VideoRoom = () => {
     const { data: { user } } = await supabase.auth.getUser();
     const newPresentationMode = !isPresentationMode;
     
-    console.log("Toggling presentation mode:", newPresentationMode);
-    
     if (presenceChannel.current) {
-      console.log("Tracking new presentation state:", {
-        isPresentationMode: newPresentationMode,
-        currentImageIndex,
-        userId: user?.id
-      });
-      
       await presenceChannel.current.track({
         isPresentationMode: newPresentationMode,
         currentImageIndex,
@@ -452,25 +430,20 @@ const VideoRoom = () => {
               </div>
             </div>
           )}
-          {users.length > 0 &&
-            users.map((user) => {
-              if (user.videoTrack) {
-                return (
-                  <div
-                    key={user.uid}
-                    className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]"
-                  >
-                    <div id={`player-${user.uid}`} className="absolute inset-0">
-                      {user.videoTrack.play(`player-${user.uid}`)}
-                    </div>
-                    <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
-                      User {user.uid}
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })}
+          {users.map((user) => (
+            <div
+              key={user.uid}
+              className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]"
+            >
+              <div
+                ref={el => userVideoRefs.current[user.uid] = el}
+                className="absolute inset-0"
+              />
+              <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
+                User {user.uid}
+              </div>
+            </div>
+          ))}
         </div>
 
         {sharedState.isPresentationMode && presentationImages.length > 0 && (
