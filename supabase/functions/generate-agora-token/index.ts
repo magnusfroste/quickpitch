@@ -7,24 +7,15 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log('Function called with request:', {
-    method: req.method,
-    url: req.url,
-    headers: Object.fromEntries(req.headers.entries())
-  });
-
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
     const { channelName } = await req.json()
-    console.log('Received channel name:', channelName);
     
     if (!channelName) {
-      console.error('Channel name is missing');
       return new Response(
         JSON.stringify({ error: 'Channel name is required' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -34,13 +25,8 @@ serve(async (req) => {
     const appId = Deno.env.get('AGORA_APP_ID')
     const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE')
 
-    console.log('Retrieved environment variables:', {
-      hasAppId: !!appId,
-      hasAppCertificate: !!appCertificate
-    });
-
     if (!appId || !appCertificate) {
-      console.error('Missing Agora credentials');
+      console.error('Missing Agora credentials')
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -55,13 +41,6 @@ serve(async (req) => {
     // Generate a random uid between 1 and 100000
     const uid = Math.floor(Math.random() * 100000) + 1
 
-    console.log('Generating token with parameters:', {
-      channelName,
-      uid,
-      role: RtcRole.PUBLISHER,
-      privilegeExpiredTs
-    });
-
     // Build token with uid
     const token = RtcTokenBuilder.buildTokenWithUid(
       appId,
@@ -72,7 +51,7 @@ serve(async (req) => {
       privilegeExpiredTs
     )
 
-    console.log('Token generated successfully');
+    console.log(`Token generated for channel: ${channelName}, uid: ${uid}`)
 
     return new Response(
       JSON.stringify({ token, uid }),
@@ -80,9 +59,9 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error generating token:', error);
+    console.error('Error generating token:', error)
     return new Response(
-      JSON.stringify({ error: 'Failed to generate token', details: error.message }),
+      JSON.stringify({ error: 'Failed to generate token' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }

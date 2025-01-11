@@ -15,7 +15,3 @@ port = 54323
 [[fetch.resources]]
 name = "agora-token"
 path = "npm:agora-token"
-
-[functions]
-[functions.generate-agora-token]
-verify_jwt = false
