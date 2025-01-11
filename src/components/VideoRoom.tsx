@@ -39,13 +39,15 @@ const VideoRoom = () => {
     currentImageIndex: 0
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isHost, setIsHost] = useState(false);
 
   useEffect(() => {
-    const getCurrentUser = async () => {
+    const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
+      setIsHost(!!user); // Set isHost based on whether user is authenticated
     };
-    getCurrentUser();
+    checkUser();
   }, []);
 
   useEffect(() => {
@@ -56,6 +58,8 @@ const VideoRoom = () => {
     }
 
     const initializePresenceChannel = async () => {
+      if (!isHost) return; // Only initialize presence channel for hosts
+      
       const { data: { user } } = await supabase.auth.getUser();
       
       presenceChannel.current = supabase.channel(`room:${channelName}`, {
@@ -71,18 +75,12 @@ const VideoRoom = () => {
           const state = presenceChannel.current.presenceState();
           console.log("Presence state updated:", state);
           
-          // Find any presenter in the room
           const presenterState = Object.values(state).find((presences: any) => 
             presences.some((presence: any) => presence.isPresentationMode)
           );
           
           if (presenterState) {
             const presenter = presenterState[0];
-            console.log("Found presenter:", presenter);
-            console.log("Setting presentation mode to:", presenter.isPresentationMode);
-            console.log("Setting current image index to:", presenter.currentImageIndex);
-            console.log("Presenter user ID:", presenter.userId);
-            
             setSharedState({
               isPresentationMode: presenter.isPresentationMode,
               currentImageIndex: presenter.currentImageIndex,
@@ -91,7 +89,6 @@ const VideoRoom = () => {
             setIsPresentationMode(presenter.isPresentationMode);
             setCurrentImageIndex(presenter.currentImageIndex);
           } else {
-            console.log("No presenter found, resetting presentation state");
             setSharedState({
               isPresentationMode: false,
               currentImageIndex: 0,
@@ -124,7 +121,9 @@ const VideoRoom = () => {
       } catch (error) {
         console.error("Error initializing Agora:", error);
         toast.error("Failed to initialize video conference");
-        navigate('/dashboard');
+        if (isHost) {
+          navigate('/dashboard');
+        }
       }
     };
 
@@ -151,38 +150,8 @@ const VideoRoom = () => {
         presenceChannel.current.untrack();
         supabase.removeChannel(presenceChannel.current);
       }
-      console.log("Cleanup complete");
     };
-  }, [channelName]);
-
-  useEffect(() => {
-    if (localTracks.videoTrack && localPlayerRef.current && start) {
-      console.log("Updating video display");
-      localPlayerRef.current.innerHTML = '';
-      localTracks.videoTrack.play(localPlayerRef.current, { 
-        fit: "cover",
-        mirror: true 
-      });
-    }
-  }, [localTracks.videoTrack, start]);
-
-  useEffect(() => {
-    fetchPresentationImages();
-  }, []);
-
-  const fetchPresentationImages = async () => {
-    const { data, error } = await supabase
-      .from('presentation_images')
-      .select('*')
-      .order('sort_order');
-
-    if (error) {
-      toast.error('Failed to fetch presentation images');
-      return;
-    }
-
-    setPresentationImages(data || []);
-  };
+  }, [channelName, isHost]);
 
   const handleUserPublished = async (user: any, mediaType: any) => {
     console.log("Remote user published:", user.uid, mediaType);
@@ -268,7 +237,9 @@ const VideoRoom = () => {
       } else {
         toast.error("Failed to join the meeting");
       }
-      navigate('/dashboard');
+      if (isHost) {
+        navigate('/dashboard');
+      }
     }
   };
 
@@ -316,10 +287,10 @@ const VideoRoom = () => {
   };
 
   const togglePresentation = async () => {
+    if (!isHost) return; // Only hosts can toggle presentation mode
+    
     const { data: { user } } = await supabase.auth.getUser();
     const newPresentationMode = !isPresentationMode;
-    
-    console.log("Toggling presentation mode:", newPresentationMode);
     
     if (presenceChannel.current) {
       const trackData = {
@@ -327,8 +298,6 @@ const VideoRoom = () => {
         currentImageIndex,
         userId: user?.id
       };
-      console.log("Tracking new presentation state:", trackData);
-      
       await presenceChannel.current.track(trackData);
     }
     
@@ -371,14 +340,15 @@ const VideoRoom = () => {
   return (
     <div className="h-screen bg-apple-gray p-4">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
-        {/* Debug information */}
-        <div className="bg-black/10 p-2 mb-4 rounded text-sm">
-          <p className="text-blue-600">Presentation Mode: {sharedState.isPresentationMode ? 'Active' : 'Inactive'}</p>
-          <p className="text-green-600">Current Image Index: {sharedState.currentImageIndex}</p>
-          <p className="text-purple-600">Presenter ID: {sharedState.presenterUserId || 'None'}</p>
-          <p className="text-orange-600">Current User ID: {currentUserId || 'Not logged in'}</p>
-          <p className="text-red-600">Is Presenter: {currentUserId === sharedState.presenterUserId ? 'Yes' : 'No'}</p>
-        </div>
+        {isHost && (
+          <div className="bg-black/10 p-2 mb-4 rounded text-sm">
+            <p className="text-blue-600">Presentation Mode: {sharedState.isPresentationMode ? 'Active' : 'Inactive'}</p>
+            <p className="text-green-600">Current Image Index: {sharedState.currentImageIndex}</p>
+            <p className="text-purple-600">Presenter ID: {sharedState.presenterUserId || 'None'}</p>
+            <p className="text-orange-600">Current User ID: {currentUserId || 'Not logged in'}</p>
+            <p className="text-red-600">Is Presenter: {currentUserId === sharedState.presenterUserId ? 'Yes' : 'No'}</p>
+          </div>
+        )}
 
         {/* Video grid */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
@@ -386,7 +356,7 @@ const VideoRoom = () => {
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
               <div ref={localPlayerRef} className="absolute inset-0"></div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
-                You
+                You {isHost ? '(Host)' : ''}
               </div>
             </div>
           )}
@@ -420,7 +390,6 @@ const VideoRoom = () => {
                 alt={`Presentation image ${sharedState.currentImageIndex + 1}`}
                 className="w-full h-[400px] object-contain rounded-lg"
               />
-              {/* Navigation buttons only visible to presenter */}
               {presentationImages.length > 1 && currentUserId === sharedState.presenterUserId && (
                 <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-4">
                   <Button
@@ -476,14 +445,16 @@ const VideoRoom = () => {
               <VideoOff className="h-5 w-5 text-red-500" />
             )}
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full w-12 h-12 bg-white"
-            onClick={togglePresentation}
-          >
-            <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
-          </Button>
+          {isHost && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full w-12 h-12 bg-white"
+              onClick={togglePresentation}
+            >
+              <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
+            </Button>
+          )}
           <Button
             variant="destructive"
             size="icon"
