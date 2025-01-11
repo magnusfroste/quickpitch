@@ -48,7 +48,6 @@ const Index = () => {
       toast.error("Please enter a meeting code");
       return;
     }
-    // Remove the validation that restricts to "lovable"
     navigate(`/meeting/${channelName}`);
   };
 
@@ -108,9 +107,9 @@ const Index = () => {
           <div className="hidden md:block">
             <div className="bg-white p-8 rounded-2xl shadow-xl">
               <img
-                src="/placeholder.svg"
-                alt="Video meeting illustration"
-                className="w-full h-auto"
+                src="/lovable-uploads/3d4e34ae-2efd-4022-b75f-2d517aca07e8.png"
+                alt="Person using QuickPitch on a tablet"
+                className="w-full h-auto rounded-lg"
               />
             </div>
           </div>
