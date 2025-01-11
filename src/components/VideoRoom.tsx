@@ -45,7 +45,7 @@ const VideoRoom = () => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
-      setIsHost(!!user); // Set isHost based on whether user is authenticated
+      setIsHost(!!user);
     };
     checkUser();
   }, []);
@@ -58,7 +58,7 @@ const VideoRoom = () => {
     }
 
     const initializePresenceChannel = async () => {
-      if (!isHost) return; // Only initialize presence channel for hosts
+      if (!isHost) return;
       
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -114,9 +114,21 @@ const VideoRoom = () => {
     const initializeAgora = async () => {
       try {
         console.log("Initializing Agora client...");
+        
+        // Remove any existing event listeners before adding new ones
+        client.removeAllListeners();
+        
+        // Add event listeners
         client.on("user-published", handleUserPublished);
         client.on("user-unpublished", handleUserUnpublished);
         client.on("user-left", handleUserLeft);
+
+        // Ensure client is not connected before joining
+        if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
+          console.log("Client already connected, leaving channel first...");
+          await client.leave();
+        }
+
         await init(channelName);
       } catch (error) {
         console.error("Error initializing Agora:", error);
@@ -140,9 +152,7 @@ const VideoRoom = () => {
         localTracks.videoTrack.stop();
         localTracks.videoTrack.close();
       }
-      client.off("user-published", handleUserPublished);
-      client.off("user-unpublished", handleUserUnpublished);
-      client.off("user-left", handleUserLeft);
+      client.removeAllListeners();
       client.leave().catch((err) => {
         console.error("Error leaving channel:", err);
       });
@@ -217,6 +227,10 @@ const VideoRoom = () => {
         optimizationMode: "detail"
       });
       console.log("Video track created");
+
+      if (videoTrack && localPlayerRef.current) {
+        videoTrack.play(localPlayerRef.current);
+      }
 
       console.log("Publishing tracks to channel...");
       await client.publish([audioTrack, videoTrack]);
@@ -470,4 +484,3 @@ const VideoRoom = () => {
 };
 
 export default VideoRoom;
-
