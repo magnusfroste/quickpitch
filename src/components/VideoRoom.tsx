@@ -41,6 +41,45 @@ const VideoRoom = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
 
+  const cleanup = async () => {
+    console.log("Cleaning up...");
+    
+    // Clean up Agora client first
+    client.removeAllListeners();
+    if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
+      try {
+        await client.leave();
+      } catch (err) {
+        console.error("Error during client leave:", err);
+      }
+    }
+    
+    // Then clean up local tracks
+    if (localTracks.audioTrack) {
+      localTracks.audioTrack.stop();
+      localTracks.audioTrack.close();
+    }
+    if (localTracks.videoTrack) {
+      localTracks.videoTrack.stop();
+      localTracks.videoTrack.close();
+    }
+    
+    // Reset states
+    setLocalTracks({ audioTrack: null, videoTrack: null });
+    setStart(false);
+    setUsers([]);
+    
+    // Clean up Supabase presence
+    if (presenceChannel.current) {
+      try {
+        await presenceChannel.current.untrack();
+        await supabase.removeChannel(presenceChannel.current);
+      } catch (err) {
+        console.error("Error during presence cleanup:", err);
+      }
+    }
+  };
+
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -237,7 +276,7 @@ const VideoRoom = () => {
     return () => {
       cleanup();
     };
-  }, [channelName, isHost]);
+  }, [channelName, isHost, navigate]);
 
   const handleUserPublished = async (user: any, mediaType: any) => {
     console.log("Remote user published:", user.uid, mediaType);
