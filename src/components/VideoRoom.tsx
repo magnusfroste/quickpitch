@@ -268,34 +268,46 @@ const VideoRoom = () => {
       console.log("Subscribed to remote user:", user.uid, mediaType);
       
       if (mediaType === "video") {
+        // Update users state immediately
         setUsers(prevUsers => {
-          if (!prevUsers.find(u => u.uid === user.uid)) {
+          const userExists = prevUsers.some(u => u.uid === user.uid);
+          if (!userExists) {
+            console.log("Adding new user to users array:", user.uid);
             return [...prevUsers, user];
           }
           return prevUsers;
         });
 
+        // Create video container if it doesn't exist
         if (!userVideoRefs.current[user.uid]) {
-          userVideoRefs.current[user.uid] = document.createElement('div');
-          userVideoRefs.current[user.uid]!.style.width = '100%';
-          userVideoRefs.current[user.uid]!.style.height = '100%';
-          userVideoRefs.current[user.uid]!.style.backgroundColor = 'black';
+          console.log("Creating new video container for user:", user.uid);
+          const container = document.createElement('div');
+          container.style.width = '100%';
+          container.style.height = '100%';
+          container.style.backgroundColor = 'black';
+          userVideoRefs.current[user.uid] = container;
         }
 
-        if (userVideoRefs.current[user.uid]) {
+        // Play the video track
+        if (user.videoTrack) {
+          console.log("Playing video track for user:", user.uid);
           const container = userVideoRefs.current[user.uid];
           if (container) {
             container.innerHTML = '';
-            user.videoTrack?.play(container);
+            user.videoTrack.play(container);
           }
         }
       }
       
       if (mediaType === "audio") {
-        user.audioTrack?.play();
+        console.log("Playing audio track for user:", user.uid);
+        if (user.audioTrack) {
+          user.audioTrack.play();
+        }
       }
     } catch (error) {
       console.error("Error handling user published:", error);
+      toast.error("Failed to connect with remote user");
     }
   };
 
@@ -497,6 +509,7 @@ const VideoRoom = () => {
                   if (el) {
                     userVideoRefs.current[user.uid] = el;
                     if (user.videoTrack) {
+                      console.log("Playing video track in ref callback for user:", user.uid);
                       user.videoTrack.play(el);
                     }
                   }
