@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
 
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
-const tempToken = "007eJxTYNh1qWMKg0Qqx3vDkDeva7mnJKUYzdp3c4KGauc1jUYe5VgFhjRT8+Qk08Q0YwuzRJPURFNL08QUSzMzixTLJFMjo8Rkk0mN6Q2BjAyLDG+yMjJAIIjPzpCTX5aYlJPKwAAAVwcfkg==";
+const tempToken = "007eJxTYOi+eHthToNTyMyzF4J87MveXpY97PbN60tOlOShXTtfm0xVYEgzNU9OMk1MM7YwSzRJTTS1NE1MsTQzs0ixTDI1MkpMPjuhKb0hkJGhe990ZkYGCATx2Rly8ssSk3JSGRgAlzoj8w==";
 
 const client = AgoraRTC.createClient({ 
   mode: "rtc", 
@@ -470,3 +470,4 @@ const VideoRoom = () => {
 };
 
 export default VideoRoom;
+
