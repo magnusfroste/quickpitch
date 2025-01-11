@@ -53,29 +53,21 @@ const VideoRoom = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error("Session error:", error);
-          toast.error("Authentication error");
-          navigate('/login');
-          return;
+        if (session) {
+          setCurrentUserId(session.user.id);
+          setIsHost(true);
+        } else {
+          // Allow non-authenticated users to join as participants
+          setIsHost(false);
         }
-
-        if (!session) {
-          console.log("No active session");
-          toast.error("Please login to join the meeting");
-          navigate('/login');
-          return;
-        }
-
-        setCurrentUserId(session.user.id);
-        setIsHost(true); // For testing, keeping everyone as host
         setIsLoading(false);
       } catch (error) {
         console.error("Auth check error:", error);
-        toast.error("Authentication error");
-        navigate('/login');
+        // Allow joining even if auth check fails
+        setIsHost(false);
+        setIsLoading(false);
       }
     };
 
@@ -100,15 +92,12 @@ const VideoRoom = () => {
     const initializePresenceChannel = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          throw new Error("No active session");
-        }
         
         const channelId = `room:${channelName}`;
         presenceChannel.current = supabase.channel(channelId, {
           config: {
             presence: {
-              key: session.user.id,
+              key: session?.user.id || 'guest',
             },
           },
         });
@@ -146,7 +135,7 @@ const VideoRoom = () => {
               await presenceChannel.current.track({
                 isPresentationMode: false,
                 currentImageIndex: 0,
-                userId: session.user.id
+                userId: session?.user.id || 'guest'
               });
             }
           });
@@ -428,7 +417,7 @@ const VideoRoom = () => {
       await presenceChannel.current.track({
         isPresentationMode: newPresentationMode,
         currentImageIndex,
-        userId: session?.user.id
+        userId: session?.user.id || 'guest'
       });
     }
     
@@ -446,7 +435,7 @@ const VideoRoom = () => {
         await presenceChannel.current.track({
           isPresentationMode: true,
           currentImageIndex: newIndex,
-          userId: session?.user.id
+          userId: session?.user.id || 'guest'
         });
       }
     }
@@ -462,7 +451,7 @@ const VideoRoom = () => {
         await presenceChannel.current.track({
           isPresentationMode: true,
           currentImageIndex: newIndex,
-          userId: session?.user.id
+          userId: session?.user.id || 'guest'
         });
       }
     }
