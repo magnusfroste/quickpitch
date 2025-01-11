@@ -32,8 +32,9 @@ const Dashboard = () => {
   };
 
   const getMeetingUrl = () => {
-    // Use window.location.origin to get the base URL in both development and production
-    return `${window.location.origin}/meeting/${channelName}`;
+    // Remove any trailing slashes and ensure proper URL construction
+    const baseUrl = window.location.origin.replace(/\/$/, '');
+    return `${baseUrl}/meeting/${encodeURIComponent(channelName.trim())}`;
   };
 
   const copyToClipboard = async () => {
@@ -49,8 +50,8 @@ const Dashboard = () => {
 
   const joinMeeting = () => {
     if (!validateChannelName()) return;
-    // Use absolute path for navigation
-    navigate(`/meeting/${channelName}`, { replace: true });
+    // Use absolute path and encode the channel name
+    navigate(`/meeting/${encodeURIComponent(channelName.trim())}`, { replace: true });
   };
 
   const handleSignOut = async () => {
