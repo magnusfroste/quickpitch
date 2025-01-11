@@ -314,7 +314,14 @@ const VideoRoom = () => {
     }
     await client.leave();
     setStart(false);
-    navigate('/dashboard'); // Changed from '/' to '/dashboard'
+    
+    // Check if user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/');
+    }
   };
 
   const togglePresentation = async () => {
