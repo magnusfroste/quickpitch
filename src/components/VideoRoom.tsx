@@ -78,18 +78,19 @@ const VideoRoom = () => {
           
           if (presenterState) {
             const presenter = presenterState[0];
+            console.log("Found presenter:", presenter);
             setSharedState({
               isPresentationMode: presenter.isPresentationMode,
-              currentImageIndex: presenter.currentImageIndex || 0,
+              currentImageIndex: presenter.currentImageIndex,
               presenterUserId: presenter.userId
             });
-            setIsPresentationMode(presenter.isPresentationMode);
           } else {
+            console.log("No presenter found");
             setSharedState({
               isPresentationMode: false,
-              currentImageIndex: 0
+              currentImageIndex: 0,
+              presenterUserId: undefined
             });
-            setIsPresentationMode(false);
           }
         })
         .subscribe(async (status: string) => {
@@ -310,9 +311,15 @@ const VideoRoom = () => {
     const newPresentationMode = !isPresentationMode;
     
     if (presenceChannel.current) {
+      console.log("Tracking new presentation state:", {
+        isPresentationMode: newPresentationMode,
+        currentImageIndex,
+        userId: user?.id
+      });
+      
       await presenceChannel.current.track({
         isPresentationMode: newPresentationMode,
-        currentImageIndex: currentImageIndex,
+        currentImageIndex,
         userId: user?.id
       });
     }
@@ -396,7 +403,7 @@ const VideoRoom = () => {
                 className="w-full h-[400px] object-contain rounded-lg"
               />
               {/* Navigation buttons only visible to presenter */}
-              {presentationImages.length > 1 && sharedState.presenterUserId === currentUserId && (
+              {presentationImages.length > 1 && currentUserId === sharedState.presenterUserId && (
                 <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-4">
                   <Button
                     variant="outline"
@@ -456,7 +463,7 @@ const VideoRoom = () => {
             className="rounded-full w-12 h-12 bg-white"
             onClick={togglePresentation}
           >
-            <Presentation className={`h-5 w-5 ${sharedState.isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
+            <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
           </Button>
           <Button
             variant="destructive"
