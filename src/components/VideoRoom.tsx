@@ -79,6 +79,9 @@ const VideoRoom = () => {
           if (presenterState) {
             const presenter = presenterState[0];
             console.log("Found presenter:", presenter);
+            console.log("Setting presentation mode to:", presenter.isPresentationMode);
+            console.log("Setting current image index to:", presenter.currentImageIndex);
+            
             setSharedState({
               isPresentationMode: presenter.isPresentationMode,
               currentImageIndex: presenter.currentImageIndex,
@@ -87,7 +90,7 @@ const VideoRoom = () => {
             setIsPresentationMode(presenter.isPresentationMode);
             setCurrentImageIndex(presenter.currentImageIndex);
           } else {
-            console.log("No presenter found");
+            console.log("No presenter found, resetting presentation state");
             setSharedState({
               isPresentationMode: false,
               currentImageIndex: 0,
@@ -99,6 +102,7 @@ const VideoRoom = () => {
         })
         .subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
+            console.log("Successfully subscribed to presence channel");
             const { data: { user } } = await supabase.auth.getUser();
             await presenceChannel.current.track({
               isPresentationMode: false,
@@ -314,6 +318,8 @@ const VideoRoom = () => {
     const { data: { user } } = await supabase.auth.getUser();
     const newPresentationMode = !isPresentationMode;
     
+    console.log("Toggling presentation mode:", newPresentationMode);
+    
     if (presenceChannel.current) {
       console.log("Tracking new presentation state:", {
         isPresentationMode: newPresentationMode,
@@ -367,6 +373,13 @@ const VideoRoom = () => {
   return (
     <div className="h-screen bg-apple-gray p-4">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
+        {/* Debug information */}
+        <div className="bg-black/10 p-2 mb-4 rounded text-sm">
+          <p className="text-blue-600">Presentation Mode: {sharedState.isPresentationMode ? 'Active' : 'Inactive'}</p>
+          <p className="text-green-600">Current Image Index: {sharedState.currentImageIndex}</p>
+          <p className="text-purple-600">Presenter ID: {sharedState.presenterUserId || 'None'}</p>
+        </div>
+
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
