@@ -32,9 +32,9 @@ const Dashboard = () => {
   };
 
   const getMeetingUrl = () => {
-    // Remove any trailing slashes and ensure proper URL construction
     const baseUrl = window.location.origin.replace(/\/$/, '');
-    return `${baseUrl}/meeting/${encodeURIComponent(channelName.trim())}`;
+    const encodedChannel = encodeURIComponent(channelName.trim());
+    return `${baseUrl}/meeting/${encodedChannel}`;
   };
 
   const copyToClipboard = async () => {
@@ -50,8 +50,8 @@ const Dashboard = () => {
 
   const joinMeeting = () => {
     if (!validateChannelName()) return;
-    // Use absolute path and encode the channel name
-    navigate(`/meeting/${encodeURIComponent(channelName.trim())}`, { replace: true });
+    const encodedChannel = encodeURIComponent(channelName.trim());
+    navigate(`/meeting/${encodedChannel}`);
   };
 
   const handleSignOut = async () => {
