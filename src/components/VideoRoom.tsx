@@ -72,6 +72,18 @@ const VideoRoom = () => {
     };
   }, [channelName]);
 
+  // Effect to handle video track updates
+  useEffect(() => {
+    if (localTracks.videoTrack && localPlayerRef.current && start) {
+      console.log("Updating video display");
+      localPlayerRef.current.innerHTML = '';
+      localTracks.videoTrack.play(localPlayerRef.current, { 
+        fit: "cover",
+        mirror: true 
+      });
+    }
+  }, [localTracks.videoTrack, start]);
+
   useEffect(() => {
     fetchPresentationImages();
   }, []);
@@ -158,19 +170,10 @@ const VideoRoom = () => {
       console.log("Publishing tracks to channel...");
       await client.publish([audioTrack, videoTrack]);
       console.log("Tracks published successfully");
-      
-      if (videoTrack && localPlayerRef.current) {
-        console.log("Playing local video track");
-        localPlayerRef.current.innerHTML = '';
-        videoTrack.play(localPlayerRef.current, { 
-          fit: "cover",
-          mirror: true 
-        });
-        console.log("Local video track playing in container");
-      }
-      
+
       setLocalTracks({ audioTrack, videoTrack });
       setStart(true);
+      
       console.log("Setup complete");
     } catch (error) {
       console.error("Error during initialization:", error);
@@ -241,7 +244,7 @@ const VideoRoom = () => {
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {start && localTracks.videoTrack && (
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
-              <div ref={localPlayerRef} className="absolute inset-0 bg-gray-800"></div>
+              <div ref={localPlayerRef} className="absolute inset-0"></div>
               <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
                 You
               </div>
@@ -255,7 +258,7 @@ const VideoRoom = () => {
                     key={user.uid}
                     className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]"
                   >
-                    <div id={`player-${user.uid}`} className="absolute inset-0 bg-gray-800">
+                    <div id={`player-${user.uid}`} className="absolute inset-0">
                       {user.videoTrack.play(`player-${user.uid}`)}
                     </div>
                     <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
