@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Presentation } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Presentation, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
@@ -27,6 +27,7 @@ const VideoRoom = () => {
   const [trackState, setTrackState] = useState({ video: true, audio: true });
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   const [presentationImages, setPresentationImages] = useState<any[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const localPlayerRef = useRef<HTMLDivElement>(null);
   const presenceChannel = useRef<any>(null);
 
@@ -40,7 +41,6 @@ const VideoRoom = () => {
     const initializePresenceChannel = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Initialize Supabase Presence channel
       presenceChannel.current = supabase.channel(`room:${channelName}`, {
         config: {
           presence: {
@@ -49,20 +49,26 @@ const VideoRoom = () => {
         },
       });
 
-      // Subscribe to presence changes
       presenceChannel.current
         .on('presence', { event: 'sync' }, () => {
           const state = presenceChannel.current.presenceState();
-          // Update presentation mode based on any presenter's state
-          const anyPresenting = Object.values(state).some((presences: any) => 
+          const presenterState = Object.values(state).find((presences: any) => 
             presences.some((presence: any) => presence.isPresentationMode)
           );
-          setIsPresentationMode(anyPresenting);
+          
+          if (presenterState) {
+            const presenter = presenterState[0];
+            setIsPresentationMode(true);
+            setCurrentImageIndex(presenter.currentImageIndex || 0);
+          } else {
+            setIsPresentationMode(false);
+          }
         })
         .subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
             await presenceChannel.current.track({
               isPresentationMode: false,
+              currentImageIndex: 0
             });
           }
         });
@@ -273,15 +279,36 @@ const VideoRoom = () => {
   const togglePresentation = async () => {
     const newPresentationMode = !isPresentationMode;
     setIsPresentationMode(newPresentationMode);
+    setCurrentImageIndex(0);
     
-    // Update presence state
     if (presenceChannel.current) {
       await presenceChannel.current.track({
         isPresentationMode: newPresentationMode,
+        currentImageIndex: 0
       });
     }
     
     toast.success(newPresentationMode ? 'Presentation started' : 'Presentation ended');
+  };
+
+  const nextImage = () => {
+    if (currentImageIndex < presentationImages.length - 1) {
+      setCurrentImageIndex(prev => prev + 1);
+      presenceChannel.current?.track({
+        isPresentationMode: true,
+        currentImageIndex: currentImageIndex + 1
+      });
+    }
+  };
+
+  const previousImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(prev => prev - 1);
+      presenceChannel.current?.track({
+        isPresentationMode: true,
+        currentImageIndex: currentImageIndex - 1
+      });
+    }
   };
 
   return (
@@ -317,20 +344,41 @@ const VideoRoom = () => {
             })}
         </div>
 
-        {/* Presentation Images Section */}
-        {isPresentationMode && (
+        {/* Presentation Image Section */}
+        {isPresentationMode && presentationImages.length > 0 && (
           <div className="mb-4 bg-white rounded-xl p-4 shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Presentation</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {presentationImages.map((image) => (
-                <div key={image.id} className="relative aspect-video">
-                  <img
-                    src={image.image_url}
-                    alt={`Presentation image ${image.id}`}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
+            <div className="relative">
+              <img
+                src={presentationImages[currentImageIndex]?.image_url}
+                alt={`Presentation image ${currentImageIndex + 1}`}
+                className="w-full h-[400px] object-contain rounded-lg"
+              />
+              {/* Navigation buttons only visible to presenter */}
+              {presentationImages.length > 1 && (
+                <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-4">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full bg-white/80 hover:bg-white"
+                    onClick={previousImage}
+                    disabled={currentImageIndex === 0}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full bg-white/80 hover:bg-white"
+                    onClick={nextImage}
+                    disabled={currentImageIndex === presentationImages.length - 1}
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
                 </div>
-              ))}
+              )}
+              <div className="absolute bottom-4 right-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
+                {currentImageIndex + 1} / {presentationImages.length}
+              </div>
             </div>
           </div>
         )}
