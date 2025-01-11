@@ -37,32 +37,36 @@ const VideoRoom = () => {
       return;
     }
 
-    // Initialize Supabase Presence channel
-    presenceChannel.current = supabase.channel(`room:${channelName}`, {
-      config: {
-        presence: {
-          key: supabase.auth.user()?.id,
+    const initializePresenceChannel = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Initialize Supabase Presence channel
+      presenceChannel.current = supabase.channel(`room:${channelName}`, {
+        config: {
+          presence: {
+            key: user?.id,
+          },
         },
-      },
-    });
-
-    // Subscribe to presence changes
-    presenceChannel.current
-      .on('presence', { event: 'sync' }, () => {
-        const state = presenceChannel.current.presenceState();
-        // Update presentation mode based on any presenter's state
-        const anyPresenting = Object.values(state).some((presences: any) => 
-          presences.some((presence: any) => presence.isPresentationMode)
-        );
-        setIsPresentationMode(anyPresenting);
-      })
-      .subscribe(async (status: string) => {
-        if (status === 'SUBSCRIBED') {
-          await presenceChannel.current.track({
-            isPresentationMode: false,
-          });
-        }
       });
+
+      // Subscribe to presence changes
+      presenceChannel.current
+        .on('presence', { event: 'sync' }, () => {
+          const state = presenceChannel.current.presenceState();
+          // Update presentation mode based on any presenter's state
+          const anyPresenting = Object.values(state).some((presences: any) => 
+            presences.some((presence: any) => presence.isPresentationMode)
+          );
+          setIsPresentationMode(anyPresenting);
+        })
+        .subscribe(async (status: string) => {
+          if (status === 'SUBSCRIBED') {
+            await presenceChannel.current.track({
+              isPresentationMode: false,
+            });
+          }
+        });
+    };
 
     const initializeAgora = async () => {
       try {
@@ -78,6 +82,7 @@ const VideoRoom = () => {
       }
     };
 
+    initializePresenceChannel();
     initializeAgora();
 
     return () => {
