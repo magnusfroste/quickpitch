@@ -110,21 +110,16 @@ const VideoRoom = () => {
 
     const getAgoraToken = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-agora-token`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ channelName }),
+        const { data, error } = await supabase.functions.invoke('generate-agora-token', {
+          body: { channelName }
         });
 
-        if (!response.ok) {
+        if (error) {
+          console.error('Error getting Agora token:', error);
           throw new Error('Failed to get Agora token');
         }
 
-        const { token, uid } = await response.json();
-        return { token, uid };
+        return data;
       } catch (error) {
         console.error('Error getting Agora token:', error);
         throw error;
@@ -275,20 +270,15 @@ const VideoRoom = () => {
       console.log("Media permissions granted");
       
       console.log("Getting Agora token...");
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-agora-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ channelName: name }),
+      const { data, error } = await supabase.functions.invoke('generate-agora-token', {
+        body: { channelName: name }
       });
 
-      if (!response.ok) {
+      if (error) {
         throw new Error('Failed to get Agora token');
       }
 
-      const { token, uid } = await response.json();
+      const { token, uid } = data;
       console.log("Joining channel:", name);
       await client.join(appId, name, token, uid);
       console.log("Joined channel successfully. UID:", uid);
