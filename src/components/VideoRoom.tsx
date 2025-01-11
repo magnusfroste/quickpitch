@@ -59,13 +59,11 @@ const VideoRoom = () => {
           setCurrentUserId(session.user.id);
           setIsHost(true);
         } else {
-          // Allow non-authenticated users to join as participants
           setIsHost(false);
         }
         setIsLoading(false);
       } catch (error) {
         console.error("Auth check error:", error);
-        // Allow joining even if auth check fails
         setIsHost(false);
         setIsLoading(false);
       }
@@ -172,6 +170,7 @@ const VideoRoom = () => {
         client.on("user-left", handleUserLeft);
         
         await client.join(appId, channelName, token, uid);
+        console.log("Joined channel successfully");
         
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
           encoderConfig: "music_standard"
@@ -196,7 +195,6 @@ const VideoRoom = () => {
         setMeetingStartTime(Date.now());
         setIsInitialized(true);
 
-        // Play the video track immediately if the ref is ready
         if (localPlayerRef.current) {
           console.log("Playing video track in local player");
           videoTrack.play(localPlayerRef.current);
@@ -256,7 +254,6 @@ const VideoRoom = () => {
     };
   }, [channelName, isLoading, isInitialized, navigate]);
 
-  // Add effect to handle video playback when ref becomes available
   useEffect(() => {
     if (localPlayerRef.current && localTracks.videoTrack) {
       console.log("Playing video track in local player (ref update)");
@@ -279,13 +276,14 @@ const VideoRoom = () => {
           return prevUsers;
         });
 
+        // Create a new container for the user's video if it doesn't exist
         if (!userVideoRefs.current[user.uid]) {
-          const videoContainer = document.createElement('div');
-          videoContainer.style.width = '100%';
-          videoContainer.style.height = '100%';
-          userVideoRefs.current[user.uid] = videoContainer;
+          userVideoRefs.current[user.uid] = document.createElement('div');
+          userVideoRefs.current[user.uid]!.style.width = '100%';
+          userVideoRefs.current[user.uid]!.style.height = '100%';
         }
 
+        // Play the video track in the container
         if (userVideoRefs.current[user.uid]) {
           const container = userVideoRefs.current[user.uid];
           if (container) {
@@ -311,24 +309,20 @@ const VideoRoom = () => {
       }
     }
     if (mediaType === "video") {
+      setUsers((prevUsers) => prevUsers.filter((User) => User.uid !== user.uid));
       if (userVideoRefs.current[user.uid]) {
         userVideoRefs.current[user.uid]!.innerHTML = '';
       }
-      setUsers((prevUsers) => {
-        return prevUsers.filter((User) => User.uid !== user.uid);
-      });
     }
   };
 
   const handleUserLeft = (user: any) => {
     console.log("Remote user left:", user.uid);
+    setUsers((prevUsers) => prevUsers.filter((User) => User.uid !== user.uid));
     if (userVideoRefs.current[user.uid]) {
       userVideoRefs.current[user.uid]!.innerHTML = '';
       delete userVideoRefs.current[user.uid];
     }
-    setUsers((prevUsers) => {
-      return prevUsers.filter((User) => User.uid !== user.uid);
-    });
   };
 
   const fetchPresentationImages = async () => {
@@ -498,14 +492,13 @@ const VideoRoom = () => {
           {users.map((user) => (
             <div
               key={user.uid}
-              className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]"
+              className="relative bg-black rounded-2xl overflow-hidden shadow-lg h-[300px]"
             >
               <div
                 ref={el => {
                   if (el) {
                     userVideoRefs.current[user.uid] = el;
                     if (user.videoTrack) {
-                      el.innerHTML = '';
                       user.videoTrack.play(el);
                     }
                   }
