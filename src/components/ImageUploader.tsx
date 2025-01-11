@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,10 +6,23 @@ import { toast } from "sonner";
 
 export const ImageUploader = () => {
   const [isUploading, setIsUploading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!userId) {
+      toast.error("Please login to upload images");
+      return;
+    }
 
     try {
       setIsUploading(true);
@@ -34,7 +47,8 @@ export const ImageUploader = () => {
         .from('presentation_images')
         .insert({
           image_url: publicUrl,
-          sort_order: 0 // Default sort order
+          sort_order: 0, // Default sort order
+          user_id: userId
         });
 
       if (dbError) throw dbError;
