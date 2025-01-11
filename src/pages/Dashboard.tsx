@@ -43,6 +43,10 @@ const Dashboard = () => {
     }
   };
 
+  const joinMeeting = () => {
+    navigate("/?meeting=lovable");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-6">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -56,7 +60,7 @@ const Dashboard = () => {
             <h2 className="text-xl font-semibold text-gray-900">Meeting Controls</h2>
             <div className="flex flex-wrap gap-3">
               <Button
-                onClick={() => navigate("/")}
+                onClick={joinMeeting}
                 className="flex items-center gap-2"
               >
                 <Video className="h-4 w-4" />
