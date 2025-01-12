@@ -87,12 +87,12 @@ const Dashboard = () => {
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="channel-name">Channel Name</Label>
+                <Label htmlFor="channel-name">Meeting Code</Label>
                 <Input
                   id="channel-name"
                   value={channelName}
                   onChange={(e) => setChannelName(e.target.value)}
-                  placeholder="Enter channel name"
+                  placeholder="Enter meeting code"
                   className="max-w-md"
                 />
               </div>
