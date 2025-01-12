@@ -19,11 +19,21 @@ export const Hero = ({
   const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
+    // Reset states when component mounts
+    setImageError(false);
+    setImageLoaded(false);
+
     // Preload the image
     const img = new Image();
     img.src = "/lovable-uploads/0eda0e12-7174-441a-8411-579eda3632f1.png";
-    img.onload = () => setImageLoaded(true);
-    img.onerror = () => setImageError(true);
+    img.onload = () => {
+      console.log("Image loaded successfully");
+      setImageLoaded(true);
+    };
+    img.onerror = (e) => {
+      console.error("Error loading image:", e);
+      setImageError(true);
+    };
   }, []);
 
   return (
@@ -68,17 +78,24 @@ export const Hero = ({
 
       <div className="hidden lg:block relative">
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-          {!imageError ? (
+          {!imageError && (
             <img
               src="/lovable-uploads/0eda0e12-7174-441a-8411-579eda3632f1.png"
               alt="Person working with tablet"
               className={`w-full h-[500px] object-cover transition-opacity duration-300 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
-              onError={() => setImageError(true)}
-              onLoad={() => setImageLoaded(true)}
+              onError={() => {
+                console.error("Image failed to load");
+                setImageError(true);
+              }}
+              onLoad={() => {
+                console.log("Image loaded in DOM");
+                setImageLoaded(true);
+              }}
             />
-          ) : (
+          )}
+          {imageError && (
             <div className="w-full h-[500px] bg-gray-100 flex items-center justify-center">
               <p className="text-gray-500">Image not available</p>
             </div>
