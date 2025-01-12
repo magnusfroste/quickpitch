@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+
+type RoomTimer = {
+  room_id: string;
+  start_time: string | null;
+  created_at: string | null;
+};
 
 export const useRoomTimer = (channelName: string | undefined, isHost: boolean) => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -46,8 +53,8 @@ export const useRoomTimer = (channelName: string | undefined, isHost: boolean) =
               table: 'room_timers',
               filter: `room_id=eq.${channelName}`
             },
-            (payload) => {
-              if (payload.new) {
+            (payload: RealtimePostgresChangesPayload<RoomTimer>) => {
+              if (payload.new && payload.new.start_time) {
                 updateTimeLeft(payload.new.start_time);
               }
             }
@@ -66,7 +73,7 @@ export const useRoomTimer = (channelName: string | undefined, isHost: boolean) =
           return;
         }
 
-        if (timer) {
+        if (timer && timer.start_time) {
           updateTimeLeft(timer.start_time);
         }
 
