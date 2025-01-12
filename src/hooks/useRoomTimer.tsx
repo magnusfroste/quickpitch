@@ -137,7 +137,7 @@ export const useRoomTimer = (
     const interval = setInterval(() => {
       const start = new Date(startTime).getTime();
       const now = new Date().getTime();
-      const duration = 20 * 60 * 1000; // 20 minutes in milliseconds
+      const duration = 20 * 60 * 1000; // 20 minutes in milliseconds (changed from 15 to 20)
       const elapsed = now - start;
       const remaining = duration - elapsed;
 
