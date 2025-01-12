@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Video, Users, Shield } from "lucide-react";
+import { LogOut, Timer, Video, Shield } from "lucide-react";
 
 const Index = () => {
   const [channelName, setChannelName] = useState("");
@@ -77,11 +77,11 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">
-            Confablink
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+        <div className="flex justify-between items-center mb-12">
+          <h1 className="text-3xl font-bold text-gray-900">
+            QuickPitch
           </h1>
           {user && (
             <Button
@@ -103,76 +103,77 @@ const Index = () => {
           )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-8">
-            <h2 className="text-5xl font-bold text-gray-900 leading-tight">
-              Connect with anyone, anywhere, instantly
-            </h2>
-            <p className="text-xl text-gray-600">
-              Start or join a secure video meeting with crystal-clear quality and easy-to-use features.
-            </p>
+            <div className="space-y-4">
+              <h2 className="text-5xl font-bold text-gray-900 leading-tight">
+                Your pitch. 5 slides.<br />
+                20 minutes. Done.
+              </h2>
+              <p className="text-xl text-gray-600">
+                Get straight to the point with our time-boxed format.
+                Show respect for your prospect's time, and they'll respect your pitch.
+              </p>
+            </div>
+            
             <div className="space-y-4">
               <Input
                 type="text"
                 placeholder="Enter meeting code"
                 value={channelName}
                 onChange={(e) => setChannelName(e.target.value)}
-                className="text-lg p-6 rounded-xl"
+                className="text-lg p-6 rounded-xl border-gray-300"
               />
               <div className="flex gap-4">
                 <Button
                   onClick={joinMeeting}
                   className="flex-1 h-12 text-lg bg-blue-600 hover:bg-blue-700"
                 >
-                  Join Meeting
+                  Join Pitch
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleHostMeeting}
-                  className="flex-1 h-12 text-lg"
+                  className="flex-1 h-12 text-lg border-2"
                 >
-                  Host Meeting
+                  Start Pitching
                 </Button>
               </div>
             </div>
           </div>
 
-          <div className="hidden md:block">
-            <div className="bg-white p-8 rounded-2xl shadow-xl">
+          <div className="hidden lg:block">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
               <img
-                src="/placeholder.svg"
-                alt="Video meeting illustration"
+                src="/lovable-uploads/995b85dc-6a6c-4e8c-a758-dfd469e756fc.png"
+                alt="Person presenting with tablet"
                 className="w-full h-auto"
               />
             </div>
           </div>
         </div>
-      </div>
-      
-      <div className="bg-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-blue-50 p-6 rounded-xl">
-              <Video className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">HD Video Calls</h3>
-              <p className="text-gray-600">
-                Crystal clear video quality for seamless communication.
-              </p>
-            </div>
-            <div className="bg-blue-50 p-6 rounded-xl">
-              <Users className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Group Meetings</h3>
-              <p className="text-gray-600">
-                Connect with multiple participants in one session.
-              </p>
-            </div>
-            <div className="bg-blue-50 p-6 rounded-xl">
-              <Shield className="h-12 w-12 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Secure Calls</h3>
-              <p className="text-gray-600">
-                End-to-end encryption for your privacy and security.
-              </p>
-            </div>
+
+        <div className="grid md:grid-cols-3 gap-8 mt-24">
+          <div className="bg-blue-50 p-8 rounded-xl">
+            <Timer className="h-12 w-12 text-blue-600 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">20-Minute Timer</h3>
+            <p className="text-gray-600">
+              Time is money. We'll keep you on track with our built-in timer.
+            </p>
+          </div>
+          <div className="bg-blue-50 p-8 rounded-xl">
+            <Video className="h-12 w-12 text-blue-600 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">5-Slide Limit</h3>
+            <p className="text-gray-600">
+              Keep your pitch focused and respect everyone's time.
+            </p>
+          </div>
+          <div className="bg-blue-50 p-8 rounded-xl">
+            <Shield className="h-12 w-12 text-blue-600 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Secure Sharing</h3>
+            <p className="text-gray-600">
+              Share your pitch with confidence using encryption in transit.
+            </p>
           </div>
         </div>
       </div>
