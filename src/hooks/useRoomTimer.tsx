@@ -20,6 +20,7 @@ export const useRoomTimer = (
 
   // Clear existing timer when channel changes
   useEffect(() => {
+    console.log('Channel changed to:', channelName);
     if (timerInterval) {
       clearInterval(timerInterval);
       setTimerInterval(null);
@@ -33,6 +34,7 @@ export const useRoomTimer = (
 
     const initializeTimer = async () => {
       try {
+        console.log('Initializing timer for channel:', channelName, 'isHost:', isHost);
         // If host, check if timer exists, if not create it
         if (isHost) {
           const { data: existingTimer } = await supabase
@@ -41,7 +43,10 @@ export const useRoomTimer = (
             .eq('room_id', channelName)
             .single();
 
+          console.log('Existing timer:', existingTimer);
+
           if (!existingTimer) {
+            console.log('Creating new timer for room:', channelName);
             const { error: insertError } = await supabase
               .from('room_timers')
               .insert([{ 
@@ -67,8 +72,10 @@ export const useRoomTimer = (
               filter: `room_id=eq.${channelName}`
             },
             (payload: RealtimePostgresChangesPayload<RoomTimer>) => {
+              console.log('Timer update received:', payload);
               const newTimer = payload.new as RoomTimer;
               if (newTimer?.start_time) {
+                console.log('Updating timer with start time:', newTimer.start_time);
                 updateTimeLeft(newTimer.start_time);
               }
             }
@@ -87,6 +94,7 @@ export const useRoomTimer = (
           return;
         }
 
+        console.log('Initial timer state:', timer);
         const timerData = timer as RoomTimer;
         if (timerData?.start_time) {
           updateTimeLeft(timerData.start_time);
@@ -108,11 +116,14 @@ export const useRoomTimer = (
 
   // Effect to handle participant count changes
   useEffect(() => {
+    console.log('Participant count changed:', participantCount, 'for channel:', channelName);
+    
     const updateStartTime = async () => {
       if (!channelName || !isHost) return;
 
       try {
         if (participantCount >= 2) {
+          console.log('Checking timer state for room:', channelName);
           // Check current timer state
           const { data: currentTimer } = await supabase
             .from('room_timers')
@@ -120,6 +131,7 @@ export const useRoomTimer = (
             .eq('room_id', channelName)
             .single();
 
+          console.log('Current timer state:', currentTimer);
           // Only update if timer exists and hasn't started yet
           if (currentTimer && currentTimer.start_time === null) {
             console.log('Starting timer for room:', channelName);
@@ -149,7 +161,7 @@ export const useRoomTimer = (
     const interval = setInterval(() => {
       const start = new Date(startTime).getTime();
       const now = new Date().getTime();
-      const duration = 20 * 60 * 1000; // 20 minutes in milliseconds (changed from 15 to 20)
+      const duration = 20 * 60 * 1000; // 20 minutes in milliseconds
       const elapsed = now - start;
       const remaining = duration - elapsed;
 
