@@ -21,7 +21,7 @@ export const Hero = ({
   useEffect(() => {
     // Preload the image
     const img = new Image();
-    img.src = "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=2000&q=80";
+    img.src = "/lovable-uploads/0eda0e12-7174-441a-8411-579eda3632f1.png";
     img.onload = () => setImageLoaded(true);
     img.onerror = () => setImageError(true);
   }, []);
@@ -70,8 +70,8 @@ export const Hero = ({
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden transform translate-x-4">
           {!imageError ? (
             <img
-              src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=2000&q=80"
-              alt="Person working with laptop"
+              src="/lovable-uploads/0eda0e12-7174-441a-8411-579eda3632f1.png"
+              alt="Person working with tablet"
               className={`w-full h-[500px] object-cover transition-opacity duration-300 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
