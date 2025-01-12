@@ -36,7 +36,7 @@ export const VideoParticipant = ({ uid, videoTrack, audioTrack, isLocal = false 
   }, [videoTrack, audioTrack, isLocal, uid]);
 
   return (
-    <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[300px]">
+    <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[200px]">
       <div ref={playerRef} className="absolute inset-0"></div>
       <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
         {isLocal ? "You" : `User ${uid}`}
