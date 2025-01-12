@@ -19,8 +19,8 @@ export const PresentationView = ({
   if (!images.length) return null;
 
   return (
-    <div className="h-full">
-      <div className="relative h-full">
+    <div className="h-full flex flex-col">
+      <div className="relative flex-1">
         <img
           src={images[currentIndex]?.image_url}
           alt={`Presentation image ${currentIndex + 1}`}
