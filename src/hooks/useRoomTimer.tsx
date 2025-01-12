@@ -18,6 +18,16 @@ export const useRoomTimer = (
   const [isExpired, setIsExpired] = useState(false);
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
 
+  // Clear existing timer when channel changes
+  useEffect(() => {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+    setTimeLeft(null);
+    setIsExpired(false);
+  }, [channelName]);
+
   useEffect(() => {
     if (!channelName) return;
 
@@ -36,7 +46,7 @@ export const useRoomTimer = (
               .from('room_timers')
               .insert([{ 
                 room_id: channelName,
-                start_time: null // Initially set to null
+                start_time: null
               }]);
 
             if (insertError) {
@@ -103,14 +113,16 @@ export const useRoomTimer = (
 
       try {
         if (participantCount >= 2) {
-          // Start the timer only if it hasn't been started yet
+          // Check current timer state
           const { data: currentTimer } = await supabase
             .from('room_timers')
             .select('start_time')
             .eq('room_id', channelName)
             .single();
 
-          if (currentTimer && !currentTimer.start_time) {
+          // Only update if timer exists and hasn't started yet
+          if (currentTimer && currentTimer.start_time === null) {
+            console.log('Starting timer for room:', channelName);
             const { error: updateError } = await supabase
               .from('room_timers')
               .update({ start_time: new Date().toISOString() })
