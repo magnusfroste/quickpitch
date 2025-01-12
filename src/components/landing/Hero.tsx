@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
 interface HeroProps {
   channelName: string;
@@ -14,6 +15,8 @@ export const Hero = ({
   onJoinMeeting,
   onHostMeeting,
 }: HeroProps) => {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <div className="grid lg:grid-cols-2 gap-16 items-center">
       <div className="space-y-8">
@@ -56,11 +59,18 @@ export const Hero = ({
 
       <div className="hidden lg:block">
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden transform translate-x-4">
-          <img
-            src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b"
-            alt="Person working with laptop"
-            className="w-full h-[500px] object-cover"
-          />
+          {!imageError ? (
+            <img
+              src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
+              alt="Person working with laptop"
+              className="w-full h-[500px] object-cover"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="w-full h-[500px] bg-gray-100 flex items-center justify-center">
+              <p className="text-gray-500">Image not available</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
