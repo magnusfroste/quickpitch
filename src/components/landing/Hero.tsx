@@ -27,13 +27,13 @@ export const Hero = ({
   }, []);
 
   return (
-    <div className="grid lg:grid-cols-2 gap-16 items-center">
-      <div className="space-y-8">
+    <div className="grid lg:grid-cols-2 gap-16 items-center py-16">
+      <div className="space-y-8 text-left">
         <div className="space-y-4">
-          <h2 className="text-5xl font-bold text-gray-900 leading-tight">
+          <h1 className="text-5xl font-bold text-apple-text leading-tight">
             Your pitch. 5 slides.<br />
             20 minutes. Done.
-          </h2>
+          </h1>
           <p className="text-xl text-gray-600">
             Get straight to the point with our time-boxed format.
             Show respect for your prospect's time, and they'll respect your pitch.
@@ -51,7 +51,7 @@ export const Hero = ({
           <div className="flex gap-4">
             <Button
               onClick={onJoinMeeting}
-              className="flex-1 h-12 text-lg bg-blue-600 hover:bg-blue-700"
+              className="flex-1 h-12 text-lg bg-apple-blue hover:bg-blue-700"
             >
               Join Pitch
             </Button>
@@ -66,8 +66,8 @@ export const Hero = ({
         </div>
       </div>
 
-      <div className="hidden lg:block">
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden transform translate-x-4">
+      <div className="hidden lg:block relative">
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
           {!imageError ? (
             <img
               src="/lovable-uploads/0eda0e12-7174-441a-8411-579eda3632f1.png"
