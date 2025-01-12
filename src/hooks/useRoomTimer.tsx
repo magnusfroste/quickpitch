@@ -61,6 +61,10 @@ export const useRoomTimer = (
               console.error('Error creating timer:', insertError);
               return;
             }
+          } else if (existingTimer.start_time) {
+            // If there's an existing timer with a start time, update local timer
+            console.log('Found existing timer with start time:', existingTimer.start_time);
+            updateTimeLeft(existingTimer.start_time);
           }
         }
 
@@ -133,9 +137,6 @@ export const useRoomTimer = (
             console.error('Error updating start time:', updateError);
             return;
           }
-
-          // Immediately update the timer locally
-          updateTimeLeft(startTime);
         }
       } catch (error) {
         console.error('Error updating start time:', error);
