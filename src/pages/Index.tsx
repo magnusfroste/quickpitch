@@ -145,9 +145,9 @@ const Index = () => {
           <div className="hidden lg:block">
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
               <img
-                src="/lovable-uploads/995b85dc-6a6c-4e8c-a758-dfd469e756fc.png"
+                src="/lovable-uploads/461167cf-53bb-44a2-b799-d17947118aef.png"
                 alt="Person presenting with tablet"
-                className="w-full h-auto"
+                className="w-full h-auto object-cover"
               />
             </div>
           </div>
