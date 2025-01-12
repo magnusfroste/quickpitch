@@ -22,7 +22,7 @@ export const VideoParticipant = ({
       console.log(`Playing ${isLocal ? 'local' : 'remote'} video for user:`, uid);
       playerRef.current.innerHTML = '';
       videoTrack.play(playerRef.current, { 
-        fit: "cover",
+        fit: "contain",
         mirror: isLocal 
       });
     }
@@ -46,9 +46,9 @@ export const VideoParticipant = ({
     <div className={`relative bg-white rounded-2xl overflow-hidden shadow-lg ${
       isPresentationMode 
         ? 'h-[180px] mb-2' 
-        : 'h-[400px]'
+        : 'aspect-video'
     }`}>
-      <div ref={playerRef} className="absolute inset-0"></div>
+      <div ref={playerRef} className="absolute inset-0 flex items-center justify-center"></div>
       <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
         {isLocal ? "You" : `User ${uid}`}
       </div>
