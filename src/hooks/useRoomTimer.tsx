@@ -9,9 +9,14 @@ type RoomTimer = {
   created_at: string | null;
 };
 
-export const useRoomTimer = (channelName: string | undefined, isHost: boolean) => {
+export const useRoomTimer = (
+  channelName: string | undefined, 
+  isHost: boolean,
+  participantCount: number
+) => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isExpired, setIsExpired] = useState(false);
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!channelName) return;
@@ -29,12 +34,10 @@ export const useRoomTimer = (channelName: string | undefined, isHost: boolean) =
           if (!existingTimer) {
             const { error: insertError } = await supabase
               .from('room_timers')
-              .insert([
-                { 
-                  room_id: channelName,
-                  start_time: new Date().toISOString()
-                }
-              ]);
+              .insert([{ 
+                room_id: channelName,
+                start_time: null // Initially set to null
+              }]);
 
             if (insertError) {
               console.error('Error creating timer:', insertError);
@@ -80,6 +83,9 @@ export const useRoomTimer = (channelName: string | undefined, isHost: boolean) =
         }
 
         return () => {
+          if (timerInterval) {
+            clearInterval(timerInterval);
+          }
           supabase.removeChannel(channel);
         };
       } catch (error) {
@@ -87,30 +93,67 @@ export const useRoomTimer = (channelName: string | undefined, isHost: boolean) =
       }
     };
 
-    const updateTimeLeft = (startTime: string) => {
-      const interval = setInterval(() => {
-        const start = new Date(startTime).getTime();
-        const now = new Date().getTime();
-        const duration = 20 * 60 * 1000; // 20 minutes in milliseconds
-        const elapsed = now - start;
-        const remaining = duration - elapsed;
-
-        if (remaining <= 0) {
-          setTimeLeft(0);
-          setIsExpired(true);
-          clearInterval(interval);
-          toast.error("Meeting time has expired!");
-        } else {
-          setTimeLeft(Math.floor(remaining / 1000));
-          setIsExpired(false);
-        }
-      }, 1000);
-
-      return () => clearInterval(interval);
-    };
-
     initializeTimer();
   }, [channelName, isHost]);
+
+  // Effect to handle participant count changes
+  useEffect(() => {
+    const updateStartTime = async () => {
+      if (!channelName || !isHost) return;
+
+      try {
+        if (participantCount >= 2) {
+          // Start the timer only if it hasn't been started yet
+          const { data: currentTimer } = await supabase
+            .from('room_timers')
+            .select('start_time')
+            .eq('room_id', channelName)
+            .single();
+
+          if (currentTimer && !currentTimer.start_time) {
+            const { error: updateError } = await supabase
+              .from('room_timers')
+              .update({ start_time: new Date().toISOString() })
+              .eq('room_id', channelName);
+
+            if (updateError) {
+              console.error('Error updating start time:', updateError);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error updating start time:', error);
+      }
+    };
+
+    updateStartTime();
+  }, [participantCount, channelName, isHost]);
+
+  const updateTimeLeft = (startTime: string) => {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+    }
+
+    const interval = setInterval(() => {
+      const start = new Date(startTime).getTime();
+      const now = new Date().getTime();
+      const duration = 20 * 60 * 1000; // 20 minutes in milliseconds
+      const elapsed = now - start;
+      const remaining = duration - elapsed;
+
+      if (remaining <= 0) {
+        setTimeLeft(0);
+        setIsExpired(true);
+        clearInterval(interval);
+        toast.error("Meeting time has expired!");
+      } else {
+        setTimeLeft(Math.floor(remaining / 1000));
+        setIsExpired(false);
+      }
+    }, 1000);
+
+    setTimerInterval(interval);
+  };
 
   const formatTime = (seconds: number | null): string => {
     if (seconds === null) return "--:--";
