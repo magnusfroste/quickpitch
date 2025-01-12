@@ -133,6 +133,9 @@ export const useRoomTimer = (
             console.error('Error updating start time:', updateError);
             return;
           }
+
+          // Immediately update the timer locally
+          updateTimeLeft(startTime);
         }
       } catch (error) {
         console.error('Error updating start time:', error);
