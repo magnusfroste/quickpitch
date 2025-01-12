@@ -20,18 +20,43 @@ const Index = () => {
       setChannelName(meetingCode);
     }
 
-    // Check authentication status
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Auth session:", session?.user ? "Logged in" : "Not logged in");
-      setUser(session?.user ?? null);
+    // Initialize authentication state
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          // If there's a session error, clear the session and redirect to login
+          await supabase.auth.signOut();
+          navigate("/login");
+          return;
+        }
+        
+        console.log("Auth session:", session?.user ? "Logged in" : "Not logged in");
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+        navigate("/login");
+      }
+    };
+
+    initAuth();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event);
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        setUser(null);
+        navigate("/login");
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setUser(session?.user ?? null);
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   const handleHostMeeting = () => {
     if (!user) {
@@ -63,8 +88,13 @@ const Index = () => {
               variant="ghost"
               size="icon"
               onClick={async () => {
-                await supabase.auth.signOut();
-                navigate("/login");
+                try {
+                  await supabase.auth.signOut();
+                  navigate("/login");
+                } catch (error) {
+                  console.error("Logout error:", error);
+                  toast.error("Failed to log out. Please try again.");
+                }
               }}
               className="text-gray-500 hover:text-gray-700"
             >
