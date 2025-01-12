@@ -54,8 +54,9 @@ export const useRoomTimer = (channelName: string | undefined, isHost: boolean) =
               filter: `room_id=eq.${channelName}`
             },
             (payload: RealtimePostgresChangesPayload<RoomTimer>) => {
-              if (payload.new && payload.new.start_time) {
-                updateTimeLeft(payload.new.start_time);
+              const newTimer = payload.new as RoomTimer;
+              if (newTimer?.start_time) {
+                updateTimeLeft(newTimer.start_time);
               }
             }
           )
@@ -73,8 +74,9 @@ export const useRoomTimer = (channelName: string | undefined, isHost: boolean) =
           return;
         }
 
-        if (timer && timer.start_time) {
-          updateTimeLeft(timer.start_time);
+        const timerData = timer as RoomTimer;
+        if (timerData?.start_time) {
+          updateTimeLeft(timerData.start_time);
         }
 
         return () => {
