@@ -19,12 +19,12 @@ export const PresentationView = ({
   if (!images.length) return null;
 
   return (
-    <div className="mb-4 bg-white rounded-xl p-4 shadow-sm">
-      <div className="relative">
+    <div className="h-full">
+      <div className="relative h-full">
         <img
           src={images[currentIndex]?.image_url}
           alt={`Presentation image ${currentIndex + 1}`}
-          className="w-full h-[400px] object-contain rounded-lg"
+          className="w-full h-full object-contain"
         />
         {images.length > 1 && isPresenter && (
           <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-4">

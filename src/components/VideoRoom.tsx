@@ -79,15 +79,16 @@ const VideoRoom = () => {
   };
 
   return (
-    <div className="h-screen bg-apple-gray p-4">
-      <div className="max-w-[1800px] mx-auto h-full flex flex-col">
-        <div className={`flex-1 ${sharedState.isPresentationMode ? 'flex gap-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} mb-4`}>
-          <div className={`${sharedState.isPresentationMode ? 'w-1/4 flex flex-col gap-4' : 'contents'}`}>
+    <div className="h-screen bg-apple-gray">
+      <div className="h-full flex flex-col">
+        <div className={`flex-1 ${sharedState.isPresentationMode ? 'flex' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4'}`}>
+          <div className={`${sharedState.isPresentationMode ? 'w-1/4' : 'contents'}`}>
             {start && localTracks.videoTrack && (
               <VideoParticipant
                 videoTrack={localTracks.videoTrack}
                 audioTrack={localTracks.audioTrack}
                 isLocal={true}
+                isPresentationMode={sharedState.isPresentationMode}
               />
             )}
             {users.map((user) => (
@@ -97,6 +98,7 @@ const VideoRoom = () => {
                   uid={user.uid}
                   videoTrack={user.videoTrack}
                   audioTrack={user.audioTrack}
+                  isPresentationMode={sharedState.isPresentationMode}
                 />
               )
             ))}

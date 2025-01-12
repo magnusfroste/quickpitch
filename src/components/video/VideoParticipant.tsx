@@ -5,9 +5,16 @@ interface VideoParticipantProps {
   videoTrack: any;
   audioTrack?: any;
   isLocal?: boolean;
+  isPresentationMode?: boolean;
 }
 
-export const VideoParticipant = ({ uid, videoTrack, audioTrack, isLocal = false }: VideoParticipantProps) => {
+export const VideoParticipant = ({ 
+  uid, 
+  videoTrack, 
+  audioTrack, 
+  isLocal = false,
+  isPresentationMode = false 
+}: VideoParticipantProps) => {
   const playerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,7 +43,11 @@ export const VideoParticipant = ({ uid, videoTrack, audioTrack, isLocal = false 
   }, [videoTrack, audioTrack, isLocal, uid]);
 
   return (
-    <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg h-[200px]">
+    <div className={`relative bg-white rounded-2xl overflow-hidden shadow-lg ${
+      isPresentationMode 
+        ? 'h-[180px] mb-2' 
+        : 'h-[400px]'
+    }`}>
       <div ref={playerRef} className="absolute inset-0"></div>
       <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
         {isLocal ? "You" : `User ${uid}`}
