@@ -95,9 +95,8 @@ export const useRoomTimer = (
         }
 
         console.log('Initial timer state:', timer);
-        const timerData = timer as RoomTimer;
-        if (timerData?.start_time) {
-          updateTimeLeft(timerData.start_time);
+        if (timer?.start_time) {
+          updateTimeLeft(timer.start_time);
         }
 
         return () => {
@@ -154,6 +153,7 @@ export const useRoomTimer = (
   }, [participantCount, channelName, isHost]);
 
   const updateTimeLeft = (startTime: string) => {
+    console.log('Updating time left with start time:', startTime);
     if (timerInterval) {
       clearInterval(timerInterval);
     }
