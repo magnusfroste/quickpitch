@@ -36,7 +36,8 @@ export const useRoomTimer = (
 
     const initializeTimer = async () => {
       try {
-        console.log('Initializing timer for channel:', channelName, 'isHost:', isHost);
+        console.log('Initializing timer for channel:', channelName);
+        
         // If host, check if timer exists, if not create it
         if (isHost) {
           const { data: existingTimer } = await supabase
@@ -85,16 +86,11 @@ export const useRoomTimer = (
           .subscribe();
 
         // Get initial timer state
-        const { data: timer, error } = await supabase
+        const { data: timer } = await supabase
           .from('room_timers')
           .select('start_time')
           .eq('room_id', channelName)
           .single();
-
-        if (error) {
-          console.error('Error fetching timer:', error);
-          return;
-        }
 
         console.log('Initial timer state:', timer);
         if (timer?.start_time) {
@@ -125,27 +121,21 @@ export const useRoomTimer = (
       try {
         // Check if we're transitioning from 1 to 2 participants
         if (previousParticipantCount === 1 && participantCount >= 2) {
-          console.log('Checking timer state for room:', channelName);
-          // Check current timer state
-          const { data: currentTimer } = await supabase
+          console.log('Starting timer for room:', channelName);
+          const startTime = new Date().toISOString();
+          
+          const { error: updateError } = await supabase
             .from('room_timers')
-            .select('start_time')
-            .eq('room_id', channelName)
-            .single();
+            .update({ start_time: startTime })
+            .eq('room_id', channelName);
 
-          console.log('Current timer state:', currentTimer);
-          // Only update if timer hasn't started yet
-          if (currentTimer && currentTimer.start_time === null) {
-            console.log('Starting timer for room:', channelName);
-            const { error: updateError } = await supabase
-              .from('room_timers')
-              .update({ start_time: new Date().toISOString() })
-              .eq('room_id', channelName);
-
-            if (updateError) {
-              console.error('Error updating start time:', updateError);
-            }
+          if (updateError) {
+            console.error('Error updating start time:', updateError);
+            return;
           }
+
+          // Immediately start the timer locally
+          updateTimeLeft(startTime);
         }
       } catch (error) {
         console.error('Error updating start time:', error);
