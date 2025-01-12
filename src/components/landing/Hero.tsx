@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface HeroProps {
   channelName: string;
@@ -16,6 +16,15 @@ export const Hero = ({
   onHostMeeting,
 }: HeroProps) => {
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    // Preload the image
+    const img = new Image();
+    img.src = "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=2000&q=80";
+    img.onload = () => setImageLoaded(true);
+    img.onerror = () => setImageError(true);
+  }, []);
 
   return (
     <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -61,10 +70,13 @@ export const Hero = ({
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden transform translate-x-4">
           {!imageError ? (
             <img
-              src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d"
+              src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=2000&q=80"
               alt="Person working with laptop"
-              className="w-full h-[500px] object-cover"
+              className={`w-full h-[500px] object-cover transition-opacity duration-300 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
               onError={() => setImageError(true)}
+              onLoad={() => setImageLoaded(true)}
             />
           ) : (
             <div className="w-full h-[500px] bg-gray-100 flex items-center justify-center">
