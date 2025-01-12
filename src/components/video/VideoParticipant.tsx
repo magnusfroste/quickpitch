@@ -22,7 +22,7 @@ export const VideoParticipant = ({
       console.log(`Playing ${isLocal ? 'local' : 'remote'} video for user:`, uid);
       playerRef.current.innerHTML = '';
       videoTrack.play(playerRef.current, { 
-        fit: "cover", // Changed from "contain" to "cover" to fill the frame
+        fit: "cover",
         mirror: isLocal 
       });
     }
@@ -45,10 +45,10 @@ export const VideoParticipant = ({
   return (
     <div className={`relative bg-black rounded-2xl overflow-hidden ${
       isPresentationMode 
-        ? 'h-[180px] w-full' // Adjusted to maintain aspect ratio in presentation mode
-        : 'aspect-video w-full max-w-4xl mx-auto' // Using aspect-video for 16:9 ratio in normal mode
+        ? 'h-[180px] w-full' 
+        : 'aspect-video w-full max-w-4xl mx-auto'
     }`}>
-      <div ref={playerRef} className="absolute inset-0 flex items-center justify-center" />
+      <div ref={playerRef} className="absolute inset-0" />
       <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full">
         {isLocal ? "You" : `User ${uid}`}
       </div>

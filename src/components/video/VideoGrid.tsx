@@ -12,7 +12,7 @@ interface VideoGridProps {
 
 export const VideoGrid = ({ start, localTracks, users, isPresentationMode }: VideoGridProps) => {
   return (
-    <div className={`${isPresentationMode ? 'w-1/4 h-full flex flex-col gap-2' : 'contents'}`}>
+    <div className={`${isPresentationMode ? 'w-1/4 flex flex-col gap-4' : 'contents'}`}>
       {start && localTracks.videoTrack && (
         <VideoParticipant
           videoTrack={localTracks.videoTrack}
