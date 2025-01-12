@@ -504,6 +504,24 @@ export type Database = {
         }
         Relationships: []
       }
+      room_timers: {
+        Row: {
+          created_at: string | null
+          room_id: string
+          start_time: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          room_id: string
+          start_time?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          room_id?: string
+          start_time?: string | null
+        }
+        Relationships: []
+      }
       sellers: {
         Row: {
           bio: string | null
