@@ -20,7 +20,7 @@ export const PresentationView = ({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="relative flex-1">
+      <div className="relative h-full">
         <img
           src={images[currentIndex]?.image_url}
           alt={`Presentation image ${currentIndex + 1}`}

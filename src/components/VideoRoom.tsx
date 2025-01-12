@@ -69,7 +69,7 @@ const VideoRoom = () => {
   return (
     <div className="h-screen bg-apple-gray">
       <div className="h-full flex flex-col">
-        <div className={`flex-1 ${sharedState.isPresentationMode ? 'flex' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4'}`}>
+        <div className={`flex-1 ${sharedState.isPresentationMode ? 'flex items-start gap-2 p-2' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4'}`}>
           <VideoGrid
             start={start}
             localTracks={localTracks}
@@ -78,7 +78,7 @@ const VideoRoom = () => {
           />
 
           {sharedState.isPresentationMode && presentationImages.length > 0 && (
-            <div className="flex-1 p-2">
+            <div className="flex-1 h-full">
               <PresentationView
                 images={presentationImages}
                 currentIndex={sharedState.currentImageIndex}
