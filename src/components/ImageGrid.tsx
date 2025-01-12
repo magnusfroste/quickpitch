@@ -58,15 +58,17 @@ export const ImageGrid = () => {
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {images.map((image) => (
-        <div key={image.id} className="relative group">
-          <img
-            src={image.image_url}
-            alt={`Presentation image ${image.id}`}
-            className="w-full h-48 object-cover rounded-lg"
-          />
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 rounded-lg flex items-center justify-center">
+        <div key={image.id} className="relative group bg-white rounded-xl overflow-hidden shadow-sm">
+          <div className="aspect-[16/9] relative">
+            <img
+              src={image.image_url}
+              alt={`Presentation image ${image.id}`}
+              className="absolute inset-0 w-full h-full object-contain bg-gray-50"
+            />
+          </div>
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center">
             <Button
               variant="destructive"
               size="icon"
