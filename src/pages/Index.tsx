@@ -45,7 +45,7 @@ const Index = () => {
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event);
-      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      if (event === 'SIGNED_OUT') {
         setUser(null);
         navigate("/login");
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
