@@ -12,13 +12,17 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check URL parameters for meeting code
     const urlParams = new URLSearchParams(window.location.search);
     const meetingCode = urlParams.get('meeting');
     if (meetingCode) {
+      console.log("Found meeting code in URL:", meetingCode);
       setChannelName(meetingCode);
     }
 
+    // Check authentication status
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Auth session:", session?.user ? "Logged in" : "Not logged in");
       setUser(session?.user ?? null);
     });
 
@@ -38,17 +42,12 @@ const Index = () => {
     navigate("/dashboard");
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
-  };
-
   const joinMeeting = () => {
     if (!channelName) {
       toast.error("Please enter a meeting code");
       return;
     }
-    // Remove the validation that restricts to "lovable"
+    console.log("Joining meeting with channel:", channelName);
     navigate(`/meeting/${channelName}`);
   };
 
@@ -63,7 +62,10 @@ const Index = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleLogout}
+              onClick={async () => {
+                await supabase.auth.signOut();
+                navigate("/login");
+              }}
               className="text-gray-500 hover:text-gray-700"
             >
               <LogOut className="h-5 w-5" />
@@ -117,7 +119,6 @@ const Index = () => {
         </div>
       </div>
       
-      {/* Features Section */}
       <div className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
