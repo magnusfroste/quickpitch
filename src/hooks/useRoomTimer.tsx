@@ -64,7 +64,7 @@ export const useRoomTimer = (
           }
         }
 
-        // Subscribe to timer updates
+        // Subscribe to timer updates for both host and clients
         const channel = supabase.channel(`room_timer:${channelName}`)
           .on(
             'postgres_changes',
@@ -85,7 +85,7 @@ export const useRoomTimer = (
           )
           .subscribe();
 
-        // Get initial timer state
+        // Get initial timer state for both host and clients
         const { data: timer } = await supabase
           .from('room_timers')
           .select('start_time')
@@ -133,18 +133,17 @@ export const useRoomTimer = (
             console.error('Error updating start time:', updateError);
             return;
           }
-
-          // Immediately start the timer locally
-          updateTimeLeft(startTime);
         }
       } catch (error) {
         console.error('Error updating start time:', error);
       }
     };
 
-    updateStartTime();
+    if (isHost) {
+      updateStartTime();
+    }
     setPreviousParticipantCount(participantCount);
-  }, [participantCount, channelName, previousParticipantCount]);
+  }, [participantCount, channelName, previousParticipantCount, isHost]);
 
   const updateTimeLeft = (startTime: string) => {
     console.log('Updating time left with start time:', startTime);
