@@ -529,10 +529,10 @@ const VideoRoom = () => {
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full w-12 h-12 bg-white"
+              className={`rounded-full w-12 h-12 ${isPresentationMode ? 'bg-[#ea384c] hover:bg-[#ea384c]/90' : 'bg-white'}`}
               onClick={togglePresentation}
             >
-              <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-apple-blue' : 'text-apple-text'}`} />
+              <Presentation className={`h-5 w-5 ${isPresentationMode ? 'text-white' : 'text-apple-text'}`} />
             </Button>
           )}
           <Button
