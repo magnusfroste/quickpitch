@@ -17,6 +17,7 @@ export const useRoomTimer = (
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isExpired, setIsExpired] = useState(false);
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
+  const [previousParticipantCount, setPreviousParticipantCount] = useState(participantCount);
 
   // Clear existing timer when channel changes
   useEffect(() => {
@@ -27,6 +28,7 @@ export const useRoomTimer = (
     }
     setTimeLeft(null);
     setIsExpired(false);
+    setPreviousParticipantCount(1);
   }, [channelName]);
 
   useEffect(() => {
@@ -115,13 +117,14 @@ export const useRoomTimer = (
 
   // Effect to handle participant count changes
   useEffect(() => {
-    console.log('Participant count changed:', participantCount, 'for channel:', channelName);
+    console.log('Participant count changed:', participantCount, 'Previous count:', previousParticipantCount);
     
     const updateStartTime = async () => {
-      if (!channelName || !isHost) return;
+      if (!channelName) return;
 
       try {
-        if (participantCount >= 2) {
+        // Check if we're transitioning from 1 to 2 participants
+        if (previousParticipantCount === 1 && participantCount >= 2) {
           console.log('Checking timer state for room:', channelName);
           // Check current timer state
           const { data: currentTimer } = await supabase
@@ -131,7 +134,7 @@ export const useRoomTimer = (
             .single();
 
           console.log('Current timer state:', currentTimer);
-          // Only update if timer exists and hasn't started yet
+          // Only update if timer hasn't started yet
           if (currentTimer && currentTimer.start_time === null) {
             console.log('Starting timer for room:', channelName);
             const { error: updateError } = await supabase
@@ -150,7 +153,8 @@ export const useRoomTimer = (
     };
 
     updateStartTime();
-  }, [participantCount, channelName, isHost]);
+    setPreviousParticipantCount(participantCount);
+  }, [participantCount, channelName, previousParticipantCount]);
 
   const updateTimeLeft = (startTime: string) => {
     console.log('Updating time left with start time:', startTime);
