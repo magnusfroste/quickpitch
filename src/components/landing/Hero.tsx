@@ -57,8 +57,8 @@ export const Hero = ({
       <div className="hidden lg:block">
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden transform translate-x-4">
           <img
-            src="/lovable-uploads/48ecab87-1aa6-4b3f-9b40-995e3d15ef3e.png"
-            alt="Person working with tablet"
+            src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b"
+            alt="Person working with laptop"
             className="w-full h-[500px] object-cover"
           />
         </div>
