@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ImageUploader } from "@/components/ImageUploader";
@@ -22,6 +22,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [isHost] = useState(true);
   const [channelName, setChannelName] = useState("");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const getMeetingUrl = () => {
     const baseUrl = window.location.origin;
@@ -45,6 +46,10 @@ const Dashboard = () => {
     await supabase.auth.signOut();
     navigate("/login");
   };
+
+  const handleUploadSuccess = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
 
   const isChannelNameValid = channelName.trim().length > 0;
 
@@ -123,7 +128,7 @@ const Dashboard = () => {
           {isHost && (
             <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
               <h2 className="text-xl font-semibold text-gray-900">Image Management</h2>
-              <ImageUploader />
+              <ImageUploader onUploadSuccess={handleUploadSuccess} />
             </div>
           )}
         </div>
@@ -132,7 +137,7 @@ const Dashboard = () => {
         {isHost && (
           <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
             <h2 className="text-xl font-semibold text-gray-900">Presentation Images</h2>
-            <ImageGrid />
+            <ImageGrid key={refreshTrigger} />
           </div>
         )}
       </div>

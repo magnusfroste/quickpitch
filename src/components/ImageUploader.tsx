@@ -4,7 +4,11 @@ import { Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const ImageUploader = () => {
+interface ImageUploaderProps {
+  onUploadSuccess?: () => void;
+}
+
+export const ImageUploader = ({ onUploadSuccess }: ImageUploaderProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -54,6 +58,7 @@ export const ImageUploader = () => {
       if (dbError) throw dbError;
 
       toast.success('Image uploaded successfully');
+      onUploadSuccess?.(); // Call the callback to trigger refresh
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload image');

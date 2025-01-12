@@ -14,6 +14,7 @@ export const ImageGrid = () => {
   const [images, setImages] = useState<PresentationImage[]>([]);
 
   useEffect(() => {
+    console.log("Fetching images...");
     fetchImages();
   }, []);
 
@@ -29,7 +30,7 @@ export const ImageGrid = () => {
       return;
     }
 
-    console.log('Fetched images:', data); // Debug log
+    console.log('Fetched images:', data);
     setImages(data || []);
   };
 
