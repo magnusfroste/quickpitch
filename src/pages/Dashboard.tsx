@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ImageUploader } from "@/components/ImageUploader";
 import { ImageGrid } from "@/components/ImageGrid";
-import { Copy, Share2, Video, Settings, LogOut } from "lucide-react";
+import { Copy, Video, Settings, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,25 +37,6 @@ const Dashboard = () => {
     }
   };
 
-  const shareMeeting = async () => {
-    const meetingUrl = getMeetingUrl();
-    const shareData = {
-      title: "Join my video meeting",
-      text: "Join my video meeting",
-      url: meetingUrl,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        throw new Error("Web Share API not supported");
-      }
-    } catch (err) {
-      copyToClipboard();
-    }
-  };
-
   const joinMeeting = () => {
     navigate(`/meeting/${channelName}`);
   };
@@ -64,6 +45,8 @@ const Dashboard = () => {
     await supabase.auth.signOut();
     navigate("/login");
   };
+
+  const isChannelNameValid = channelName.trim().length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-6">
@@ -118,6 +101,7 @@ const Dashboard = () => {
                 <Button
                   onClick={joinMeeting}
                   className="flex items-center gap-2"
+                  disabled={!isChannelNameValid}
                 >
                   <Video className="h-4 w-4" />
                   Start Meeting
@@ -126,6 +110,7 @@ const Dashboard = () => {
                   variant="outline"
                   onClick={copyToClipboard}
                   className="flex items-center gap-2"
+                  disabled={!isChannelNameValid}
                 >
                   <Copy className="h-4 w-4" />
                   Copy Link
