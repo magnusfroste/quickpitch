@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 const appId = "f57cb5af386a4ea595ad9668d9b522ac";
 
+console.log("Initializing Agora client with mode: rtc, codec: vp8");
 const client = AgoraRTC.createClient({ 
   mode: "rtc", 
   codec: "vp8",
@@ -22,6 +23,7 @@ export const useAgoraClient = (channelName: string | undefined) => {
 
   const getAgoraToken = async () => {
     try {
+      console.log("Requesting Agora token for channel:", channelName);
       const { data, error } = await supabase.functions.invoke('generate-agora-token', {
         body: { channelName }
       });
@@ -31,6 +33,7 @@ export const useAgoraClient = (channelName: string | undefined) => {
         throw new Error('Failed to get Agora token');
       }
 
+      console.log("Successfully obtained Agora token");
       return data;
     } catch (error) {
       console.error('Error getting Agora token:', error);
@@ -40,19 +43,24 @@ export const useAgoraClient = (channelName: string | undefined) => {
 
   const initializeAgora = async () => {
     if (!channelName) {
+      console.error("Channel name is undefined");
       toast.error("Invalid channel name");
       throw new Error("Invalid channel name");
     }
 
     try {
+      console.log("Starting Agora initialization for channel:", channelName);
       const { token, uid } = await getAgoraToken();
       
+      console.log("Joining channel with UID:", uid);
       await client.join(appId, channelName, token, uid);
       
+      console.log("Creating audio track with music_standard encoding");
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
         encoderConfig: "music_standard"
       });
       
+      console.log("Creating video track with optimized settings");
       const videoTrack = await AgoraRTC.createCameraVideoTrack({
         encoderConfig: {
           width: 640,
@@ -64,10 +72,12 @@ export const useAgoraClient = (channelName: string | undefined) => {
         optimizationMode: "detail"
       });
 
+      console.log("Publishing tracks to channel");
       await client.publish([audioTrack, videoTrack]);
 
       setLocalTracks({ audioTrack, videoTrack });
       setStart(true);
+      console.log("Successfully initialized and published local tracks");
 
       return { audioTrack, videoTrack };
     } catch (error) {
@@ -122,11 +132,13 @@ export const useAgoraClient = (channelName: string | undefined) => {
   };
 
   useEffect(() => {
+    console.log("Setting up Agora event listeners");
     client.on("user-published", handleUserPublished);
     client.on("user-unpublished", handleUserUnpublished);
     client.on("user-left", handleUserLeft);
 
     return () => {
+      console.log("Cleaning up Agora event listeners");
       client.off("user-published", handleUserPublished);
       client.off("user-unpublished", handleUserUnpublished);
       client.off("user-left", handleUserLeft);
@@ -135,34 +147,40 @@ export const useAgoraClient = (channelName: string | undefined) => {
 
   const mute = async (type: "audio" | "video") => {
     try {
+      console.log(`Attempting to toggle ${type} track`);
       if (type === "audio") {
         if (!localTracks.audioTrack) {
+          console.error("Audio track not initialized");
           toast.error("Audio track not initialized");
           return;
         }
         await localTracks.audioTrack.setEnabled(!trackState.audio);
+        console.log(`Audio track ${trackState.audio ? 'muted' : 'unmuted'}`);
         setTrackState((ps) => ({
           ...ps,
           audio: !ps.audio,
         }));
       } else if (type === "video") {
         if (!localTracks.videoTrack) {
+          console.error("Video track not initialized");
           toast.error("Video track not initialized");
           return;
         }
         await localTracks.videoTrack.setEnabled(!trackState.video);
+        console.log(`Video track ${trackState.video ? 'stopped' : 'started'}`);
         setTrackState((ps) => ({
           ...ps,
           video: !ps.video,
         }));
       }
     } catch (error) {
-      console.error("Error toggling track:", error);
+      console.error(`Error toggling ${type} track:`, error);
       toast.error(`Failed to ${trackState[type] ? "mute" : "unmute"} ${type}`);
     }
   };
 
   const leaveChannel = async () => {
+    console.log("Leaving channel and cleaning up resources");
     if (localTracks.audioTrack) {
       localTracks.audioTrack.stop();
       localTracks.audioTrack.close();
@@ -173,6 +191,7 @@ export const useAgoraClient = (channelName: string | undefined) => {
     }
     await client.leave();
     setStart(false);
+    console.log("Successfully left channel and cleaned up");
   };
 
   return {

@@ -9,6 +9,7 @@ import { useAgoraClient } from "@/hooks/useAgoraClient";
 import { usePresentation } from "@/hooks/usePresentation";
 
 const VideoRoom = () => {
+  console.log("Rendering VideoRoom component");
   const { channelName } = useParams();
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -36,23 +37,29 @@ const VideoRoom = () => {
 
   useEffect(() => {
     const getCurrentUser = async () => {
+      console.log("Getting current user information");
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
       setIsHost(!!user?.id);
+      console.log("Current user:", user?.id ? "Authenticated" : "Not authenticated");
     };
     getCurrentUser();
 
     if (!channelName) {
+      console.error("No channel name provided");
       toast.error("Invalid channel name");
       navigate('/dashboard');
       return;
     }
 
-    initializeAgora().catch(() => {
+    console.log("Initializing Agora client");
+    initializeAgora().catch((err) => {
+      console.error("Failed to initialize Agora:", err);
       navigate('/dashboard');
     });
 
     return () => {
+      console.log("Cleaning up VideoRoom component");
       leaveChannel().catch((err) => {
         console.error("Error leaving channel:", err);
       });
@@ -60,6 +67,7 @@ const VideoRoom = () => {
   }, [channelName, navigate]);
 
   const handleLeave = async () => {
+    console.log("Handling leave channel request");
     await leaveChannel();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -67,6 +75,7 @@ const VideoRoom = () => {
     } else {
       navigate('/');
     }
+    console.log("Successfully left channel");
   };
 
   return (
