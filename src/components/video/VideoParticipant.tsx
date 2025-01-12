@@ -46,10 +46,10 @@ export const VideoParticipant = ({
     <div className={`relative bg-black rounded-2xl overflow-hidden ${
       isPresentationMode 
         ? 'h-[180px] mb-2' 
-        : 'w-full max-w-3xl mx-auto aspect-[16/9]'
+        : 'aspect-video w-full max-w-3xl mx-auto'
     }`}>
-      <div ref={playerRef} className="absolute inset-0 flex items-center justify-center w-full h-full"></div>
-      <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/30 backdrop-blur-md px-3 py-1 rounded-full">
+      <div ref={playerRef} className="absolute inset-0 flex items-center justify-center" />
+      <div className="absolute bottom-4 left-4 text-white text-sm font-medium bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full">
         {isLocal ? "You" : `User ${uid}`}
       </div>
     </div>
