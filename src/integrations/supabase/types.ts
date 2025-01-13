@@ -504,6 +504,36 @@ export type Database = {
         }
         Relationships: []
       }
+      quickpitch_call_history: {
+        Row: {
+          channel_name: string
+          created_at: string | null
+          end_time: string | null
+          id: number
+          participant_count: number | null
+          start_time: string
+          user_id: string
+        }
+        Insert: {
+          channel_name: string
+          created_at?: string | null
+          end_time?: string | null
+          id?: number
+          participant_count?: number | null
+          start_time: string
+          user_id: string
+        }
+        Update: {
+          channel_name?: string
+          created_at?: string | null
+          end_time?: string | null
+          id?: number
+          participant_count?: number | null
+          start_time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       room_timers: {
         Row: {
           created_at: string | null

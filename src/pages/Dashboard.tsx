@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MeetingControls } from "@/components/dashboard/MeetingControls";
 import { UserMenu } from "@/components/dashboard/UserMenu";
 import { ImageManagement } from "@/components/dashboard/ImageManagement";
+import { CallHistory } from "@/components/dashboard/CallHistory";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -38,11 +39,14 @@ const Dashboard = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-          <MeetingControls
-            channelName={channelName}
-            onChannelNameChange={setChannelName}
-            onJoinMeeting={handleJoinMeeting}
-          />
+          <div className="space-y-8">
+            <MeetingControls
+              channelName={channelName}
+              onChannelNameChange={setChannelName}
+              onJoinMeeting={handleJoinMeeting}
+            />
+            <CallHistory />
+          </div>
           
           {isHost && (
             <div className="space-y-8">
