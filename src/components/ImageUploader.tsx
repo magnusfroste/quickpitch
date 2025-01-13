@@ -31,6 +31,19 @@ export const ImageUploader = ({ onUploadSuccess }: ImageUploaderProps) => {
     try {
       setIsUploading(true);
 
+      // Check image count
+      const { count, error: countError } = await supabase
+        .from('presentation_images')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      if (countError) throw countError;
+      
+      if (count && count >= 5) {
+        toast.info("Maximum 5 images allowed. Please remove an existing image first.");
+        return;
+      }
+
       // Upload to storage
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
@@ -51,14 +64,14 @@ export const ImageUploader = ({ onUploadSuccess }: ImageUploaderProps) => {
         .from('presentation_images')
         .insert({
           image_url: publicUrl,
-          sort_order: 0, // Default sort order
+          sort_order: 0,
           user_id: userId
         });
 
       if (dbError) throw dbError;
 
       toast.success('Image uploaded successfully');
-      onUploadSuccess?.(); // Call the callback to trigger refresh
+      onUploadSuccess?.();
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload image');
