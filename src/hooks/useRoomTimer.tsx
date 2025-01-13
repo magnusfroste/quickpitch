@@ -61,11 +61,19 @@ export const useRoomTimer = (
               console.error('Error creating timer:', insertError);
               return;
             }
-          } else if (existingTimer.start_time) {
-            // If there's an existing timer with a start time, update local timer
-            console.log('Found existing timer with start time:', existingTimer.start_time);
-            updateTimeLeft(existingTimer.start_time);
           }
+        }
+
+        // Get initial timer state for both host and clients
+        const { data: timer } = await supabase
+          .from('room_timers')
+          .select('start_time')
+          .eq('room_id', channelName)
+          .single();
+
+        console.log('Initial timer state:', timer);
+        if (timer?.start_time) {
+          updateTimeLeft(timer.start_time);
         }
 
         // Subscribe to timer updates for both host and clients
@@ -89,18 +97,6 @@ export const useRoomTimer = (
           )
           .subscribe();
 
-        // Get initial timer state for both host and clients
-        const { data: timer } = await supabase
-          .from('room_timers')
-          .select('start_time')
-          .eq('room_id', channelName)
-          .single();
-
-        console.log('Initial timer state:', timer);
-        if (timer?.start_time) {
-          updateTimeLeft(timer.start_time);
-        }
-
         return () => {
           if (timerInterval) {
             clearInterval(timerInterval);
@@ -120,7 +116,7 @@ export const useRoomTimer = (
     console.log('Participant count changed:', participantCount, 'Previous count:', previousParticipantCount);
     
     const updateStartTime = async () => {
-      if (!channelName) return;
+      if (!channelName || !isHost) return;
 
       try {
         // Check if we're transitioning from 1 to 2 participants
@@ -137,17 +133,18 @@ export const useRoomTimer = (
             console.error('Error updating start time:', updateError);
             return;
           }
+
+          // Update the timer locally for the host
+          updateTimeLeft(startTime);
         }
       } catch (error) {
         console.error('Error updating start time:', error);
       }
     };
 
-    if (isHost) {
-      updateStartTime();
-    }
+    updateStartTime();
     setPreviousParticipantCount(participantCount);
-  }, [participantCount, channelName, previousParticipantCount, isHost]);
+  }, [participantCount, channelName, isHost, previousParticipantCount]);
 
   const updateTimeLeft = (startTime: string) => {
     console.log('Updating time left with start time:', startTime);
