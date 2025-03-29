@@ -79,22 +79,19 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       setStatusMessage("Adding images to thread...");
       console.log("Creating message with images...");
       
-      // Use the correct types for the message content
-      const messageContent: Array<{
-        type: "text" | "image_url";
-        text?: string;
-        image_url?: { url: string };
-      }> = [
-        {
-          type: "text",
-          text: "Please analyze these pitch deck images for story, clarity, and effectiveness. Provide feedback on each image individually and how they work together as a pitch deck."
-        }
-      ];
-
+      // First create the initial text message
+      const textContent = {
+        type: "text" as const,
+        text: "Please analyze these pitch deck images for story, clarity, and effectiveness. Provide feedback on each image individually and how they work together as a pitch deck."
+      };
+      
+      // Create separate array for the content
+      const messageContent: Array<OpenAI.Beta.Threads.Messages.MessageContentParam> = [textContent];
+      
       // Add each image to the content array
       for (const image of images) {
         messageContent.push({
-          type: "image_url",
+          type: "image_url" as const,
           image_url: {
             url: image.image_url
           }
