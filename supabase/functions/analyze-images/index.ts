@@ -36,6 +36,7 @@ serve(async (req) => {
       );
     }
 
+    console.log("Creating thread with OpenAI...");
     // Create a thread
     const threadResponse = await fetch('https://api.openai.com/v1/threads', {
       method: 'POST',
@@ -49,13 +50,16 @@ serve(async (req) => {
 
     if (!threadResponse.ok) {
       const errorData = await threadResponse.json();
+      console.error("Thread creation error:", errorData);
       throw new Error(`Failed to create thread: ${JSON.stringify(errorData)}`);
     }
 
     const threadData = await threadResponse.json();
     const threadId = threadData.id;
+    console.log("Thread created with ID:", threadId);
 
     // Create a message with image URLs
+    console.log("Creating message with images...");
     const messageContent = {
       role: 'user',
       content: [
@@ -84,10 +88,13 @@ serve(async (req) => {
 
     if (!messageResponse.ok) {
       const errorData = await messageResponse.json();
+      console.error("Message creation error:", errorData);
       throw new Error(`Failed to create message: ${JSON.stringify(errorData)}`);
     }
+    console.log("Message created successfully");
 
     // Run the assistant
+    console.log("Running the assistant...");
     const runResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
       method: 'POST',
       headers: {
@@ -102,19 +109,23 @@ serve(async (req) => {
 
     if (!runResponse.ok) {
       const errorData = await runResponse.json();
+      console.error("Run creation error:", errorData);
       throw new Error(`Failed to run assistant: ${JSON.stringify(errorData)}`);
     }
 
     const runData = await runResponse.json();
     const runId = runData.id;
+    console.log("Run created with ID:", runId);
 
     // Poll for completion
     let runStatus = runData.status;
     let attempts = 0;
     const maxAttempts = 60; // 5 minutes max (5s * 60)
+    console.log("Polling for run completion...");
 
     while (runStatus !== 'completed' && runStatus !== 'failed' && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between checks
+      console.log(`Poll attempt ${attempts + 1}, current status: ${runStatus}`);
       
       const statusResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs/${runId}`, {
         headers: {
@@ -125,6 +136,7 @@ serve(async (req) => {
       
       if (!statusResponse.ok) {
         const errorData = await statusResponse.json();
+        console.error("Status check error:", errorData);
         throw new Error(`Failed to check run status: ${JSON.stringify(errorData)}`);
       }
       
@@ -134,10 +146,13 @@ serve(async (req) => {
     }
 
     if (runStatus !== 'completed') {
+      console.error(`Run did not complete. Final status: ${runStatus}`);
       throw new Error(`Run did not complete successfully. Status: ${runStatus}`);
     }
+    console.log("Run completed successfully");
 
     // Retrieve messages
+    console.log("Retrieving messages...");
     const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
@@ -147,10 +162,12 @@ serve(async (req) => {
 
     if (!messagesResponse.ok) {
       const errorData = await messagesResponse.json();
+      console.error("Message retrieval error:", errorData);
       throw new Error(`Failed to retrieve messages: ${JSON.stringify(errorData)}`);
     }
 
     const messagesData = await messagesResponse.json();
+    console.log("Messages retrieved successfully");
     
     // Extract the assistant's response
     const assistantMessages = messagesData.data.filter(msg => msg.role === 'assistant');
@@ -159,10 +176,14 @@ serve(async (req) => {
     if (assistantMessages.length > 0) {
       const latestMessage = assistantMessages[0];
       analysisResult = latestMessage.content[0].text.value;
+      console.log("Analysis result extracted successfully");
+    } else {
+      console.warn("No assistant messages found");
     }
 
     // Store the analysis in Supabase if we have a valid response
     if (analysisResult && userId) {
+      console.log("Storing analysis in database...");
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       
       const { error } = await supabase
@@ -176,9 +197,12 @@ serve(async (req) => {
         
       if (error) {
         console.error('Error storing analysis in database:', error);
+      } else {
+        console.log("Analysis stored in database successfully");
       }
     }
 
+    console.log("Returning analysis result");
     return new Response(
       JSON.stringify({ analysis: analysisResult, threadId, runId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
