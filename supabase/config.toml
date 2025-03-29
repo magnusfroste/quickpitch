@@ -15,4 +15,4 @@ port = 54323
 
 [functions]
 [functions.import_map]
-path = "./import_map.json"
+imports = { "agora-token" = "npm:agora-token" }
