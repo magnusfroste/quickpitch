@@ -18,6 +18,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [apiResponse, setApiResponse] = useState<any>(null); // Store the raw API response for debugging
+  const [error, setError] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
     if (images.length === 0) {
@@ -29,6 +30,85 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       setIsAnalyzing(true);
       setAnalysis(null);
       setApiResponse(null);
+      setError(null);
+
+      // Get current user
+      console.log("Getting current user...");
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Error getting user:", userError);
+        throw new Error(`Failed to get user: ${userError.message}`);
+      }
+      
+      if (!user) {
+        console.error("No user found");
+        toast.error("You must be logged in to analyze images");
+        return;
+      }
+      
+      console.log("User authenticated:", user.id);
+
+      const imageUrls = images.map(img => img.image_url);
+      console.log(`Analyzing ${images.length} images:`, imageUrls);
+
+      // Try using the Edge Function instead of direct OpenAI API call
+      console.log("Calling analyze-images Edge Function...");
+      const response = await fetch(`${window.location.origin}/functions/v1/analyze-images`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.SUPABASE_ANON_KEY || ''}`
+        },
+        body: JSON.stringify({
+          imageUrls,
+          userId: user.id
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Edge function failed:", errorText);
+        throw new Error(`Edge function failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log("Edge function response:", result);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      if (result.analysis) {
+        console.log("Analysis received successfully");
+        setAnalysis(result.analysis);
+        setApiResponse(result);
+        toast.success("Images analyzed successfully");
+      } else {
+        console.error("No analysis in result:", result);
+        throw new Error("No analysis returned from the API");
+      }
+    } catch (error) {
+      console.error("Error analyzing images:", error);
+      setError(error instanceof Error ? error.message : "Failed to analyze images");
+      toast.error(error instanceof Error ? error.message : "Failed to analyze images");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Fallback to direct OpenAI API calls if edge function fails
+  const handleAnalyzeWithOpenAI = async () => {
+    if (images.length === 0) {
+      toast.error("Please upload at least one image to analyze");
+      return;
+    }
+
+    try {
+      setIsAnalyzing(true);
+      setAnalysis(null);
+      setApiResponse(null);
+      setError(null);
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -179,6 +259,9 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
                 
               if (error) {
                 console.error('Error storing analysis in database:', error);
+                toast.error(`Error storing analysis: ${error.message}`);
+              } else {
+                console.log("Analysis stored in database successfully");
               }
             } else {
               console.error("Unexpected message format:", latestMessage);
@@ -214,6 +297,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       
     } catch (error) {
       console.error("Error analyzing images:", error);
+      setError(error instanceof Error ? error.message : "Failed to analyze images");
       setIsAnalyzing(false);
       toast.error(error instanceof Error ? error.message : "Failed to analyze images");
     }
@@ -223,14 +307,25 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-900">AI Image Analysis</h2>
-        <Button 
-          onClick={handleAnalyze} 
-          disabled={isAnalyzing || images.length === 0}
-          className="gap-2"
-        >
-          <Sparkles className="h-4 w-4" />
-          {isAnalyzing ? "Analyzing..." : "Analyze Images"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleAnalyze} 
+            disabled={isAnalyzing || images.length === 0}
+            className="gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            {isAnalyzing ? "Analyzing..." : "Analyze with Edge Function"}
+          </Button>
+          <Button 
+            onClick={handleAnalyzeWithOpenAI} 
+            disabled={isAnalyzing || images.length === 0}
+            variant="outline" 
+            className="gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            {isAnalyzing ? "Analyzing..." : "Analyze with Direct API"}
+          </Button>
+        </div>
       </div>
 
       {analysis && (
@@ -247,7 +342,18 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         </Card>
       )}
 
-      {!analysis && !isAnalyzing && (
+      {error && (
+        <Card className="border-red-300 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-600">Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-red-600">{error}</div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!analysis && !error && !isAnalyzing && (
         <div className="text-center p-6 border border-dashed rounded-lg bg-gray-50">
           <p className="text-gray-500">
             Click "Analyze Images" to get AI feedback on your pitch images
