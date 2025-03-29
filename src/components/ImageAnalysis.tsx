@@ -173,6 +173,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
                 .insert({
                   user_id: user.id,
                   analysis: analysisResult,
+                  image_count: images.length, // Add the missing image_count field
                   created_at: new Date().toISOString()
                 });
                 
