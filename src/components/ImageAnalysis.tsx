@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // OpenAI Assistant ID for image analysis
-const ASSISTANT_ID = "asst_abc123"; // Replace with your actual Assistant ID
+const ASSISTANT_ID = "asst_rSCcnqL8PYzpquRTsD8Owuub"; // Replace with your actual Assistant ID
 
 interface ImageAnalysisProps {
   images: { id: number; image_url: string }[];
