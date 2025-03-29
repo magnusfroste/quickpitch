@@ -6,7 +6,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { toast } from "sonner";
 
 interface ImageManagementProps {
   onUploadSuccess: () => void;
@@ -73,7 +72,6 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
           <AlertTitle>OpenAI API Key Missing</AlertTitle>
           <AlertDescription>
             The OpenAI API key is not configured. Please check your .env file and make sure VITE_OPENAI_API_KEY is set.
-            Current value: {import.meta.env.VITE_OPENAI_API_KEY ? "Present (hidden)" : "Missing"}
           </AlertDescription>
         </Alert>
       )}
@@ -84,7 +82,6 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
           <AlertTitle>OpenAI Assistant ID Missing</AlertTitle>
           <AlertDescription>
             The OpenAI Assistant ID is not configured. Please check your .env file and make sure VITE_OPENAI_ASSISTANT_ID is set.
-            Current value: {import.meta.env.VITE_OPENAI_ASSISTANT_ID ? "Present (hidden)" : "Missing"}
           </AlertDescription>
         </Alert>
       )}

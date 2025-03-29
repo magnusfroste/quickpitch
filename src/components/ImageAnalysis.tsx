@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Sparkles, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import OpenAI from "openai";
 
 interface ImageAnalysisProps {
   images: { id: number; image_url: string }[];
@@ -14,9 +15,8 @@ interface ImageAnalysisProps {
 export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
-  const [apiResponse, setApiResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [apiStatus, setApiStatus] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
     if (images.length === 0) {
@@ -27,11 +27,10 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
     try {
       setIsAnalyzing(true);
       setAnalysis(null);
-      setApiResponse(null);
       setError(null);
-      setApiStatus("Starting analysis via direct API...");
+      setStatusMessage("Preparing to analyze images...");
 
-      // Get OpenAI credentials from environment variables
+      // Get OpenAI API key and Assistant ID from environment variables
       const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
       const assistantId = import.meta.env.VITE_OPENAI_ASSISTANT_ID;
       
@@ -63,189 +62,121 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       
       console.log("User authenticated:", user.id);
 
-      const imageUrls = images.map(img => img.image_url);
-      console.log(`Analyzing ${images.length} images:`, imageUrls);
+      // Initialize OpenAI client with the beta flag
+      const openai = new OpenAI({
+        apiKey: openaiApiKey,
+        dangerouslyAllowBrowser: true // Required for client-side usage
+      });
 
-      // Create a thread
-      setApiStatus("Creating OpenAI thread...");
+      setStatusMessage("Creating thread...");
       console.log("Creating thread...");
       
-      const threadResponse = await fetch('https://api.openai.com/v1/threads', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-          'OpenAI-Beta': 'assistants=v1'
-        },
-        body: JSON.stringify({})
-      });
+      // Create a thread
+      const thread = await openai.beta.threads.create();
+      console.log("Thread created with ID:", thread.id);
 
-      if (!threadResponse.ok) {
-        const errorData = await threadResponse.json();
-        console.error("Thread creation error:", errorData);
-        throw new Error(`Failed to create thread: ${JSON.stringify(errorData)}`);
-      }
-
-      const threadData = await threadResponse.json();
-      const threadId = threadData.id;
-      console.log("Thread created with ID:", threadId);
-
-      // Create a message with image URLs
-      setApiStatus("Adding images to thread...");
+      // Prepare message content
+      setStatusMessage("Adding images to thread...");
       console.log("Creating message with images...");
       
-      const messageContent = {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: 'Please analyze these pitch deck images for story, clarity, and effectiveness. Provide feedback on each image individually and how they work together as a pitch deck.'
-          },
-          ...imageUrls.map(url => ({
-            type: 'image_url',
-            image_url: {
-              url
-            }
-          }))
-        ]
-      };
+      const messageContent = [
+        {
+          type: "text",
+          text: "Please analyze these pitch deck images for story, clarity, and effectiveness. Provide feedback on each image individually and how they work together as a pitch deck."
+        }
+      ];
 
-      const messageResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-          'OpenAI-Beta': 'assistants=v1'
-        },
-        body: JSON.stringify(messageContent)
-      });
-
-      if (!messageResponse.ok) {
-        const errorData = await messageResponse.json();
-        console.error("Message creation error:", errorData);
-        throw new Error(`Failed to create message: ${JSON.stringify(errorData)}`);
+      // Add each image to the content array
+      for (const image of images) {
+        messageContent.push({
+          type: "image_url",
+          image_url: {
+            url: image.image_url
+          }
+        });
       }
+
+      // Add message to thread
+      await openai.beta.threads.messages.create(thread.id, {
+        role: "user",
+        content: messageContent
+      });
       console.log("Message created successfully");
 
       // Run the assistant
-      setApiStatus("Running assistant...");
+      setStatusMessage("Running assistant...");
       console.log("Running assistant with ID:", assistantId);
       
-      const runResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-          'OpenAI-Beta': 'assistants=v1'
-        },
-        body: JSON.stringify({
-          assistant_id: assistantId
-        })
+      const run = await openai.beta.threads.runs.create(thread.id, {
+        assistant_id: assistantId
       });
-
-      if (!runResponse.ok) {
-        const errorData = await runResponse.json();
-        console.error("Run creation error:", errorData);
-        throw new Error(`Failed to run assistant: ${JSON.stringify(errorData)}`);
-      }
-
-      const runData = await runResponse.json();
-      const runId = runData.id;
-      console.log("Run created with ID:", runId);
+      console.log("Run created with ID:", run.id);
 
       // Poll for completion
-      setApiStatus("Waiting for analysis to complete...");
-      let runStatus = runData.status;
+      setStatusMessage("Waiting for analysis to complete...");
+      let runStatus = run.status;
       let attempts = 0;
       const maxAttempts = 60; // 5 minutes max (5s * 60)
       
-      const checkStatus = async () => {
-        const statusResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs/${runId}`, {
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'OpenAI-Beta': 'assistants=v1'
-          }
-        });
-        
-        if (!statusResponse.ok) {
-          const errorData = await statusResponse.json();
-          console.error("Status check error:", errorData);
-          throw new Error(`Failed to check run status: ${JSON.stringify(errorData)}`);
-        }
-        
-        return await statusResponse.json();
-      };
-
-      // Polling loop
-      while (runStatus !== 'completed' && runStatus !== 'failed' && attempts < maxAttempts) {
+      while (runStatus !== "completed" && runStatus !== "failed" && attempts < maxAttempts) {
         attempts++;
         console.log(`Poll attempt ${attempts}, current status: ${runStatus}`);
-        setApiStatus(`Waiting for analysis... Status: ${runStatus} (${attempts}/${maxAttempts})`);
+        setStatusMessage(`Waiting for analysis... Status: ${runStatus} (${attempts}/${maxAttempts})`);
         
         await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
         
-        const statusData = await checkStatus();
-        runStatus = statusData.status;
+        const runResponse = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+        runStatus = runResponse.status;
       }
       
-      if (runStatus !== 'completed') {
+      if (runStatus !== "completed") {
         console.error(`Run did not complete. Final status: ${runStatus}`);
         throw new Error(`Analysis did not complete successfully. Status: ${runStatus}`);
       }
       
       // Retrieve messages
-      setApiStatus("Retrieving analysis results...");
+      setStatusMessage("Retrieving analysis results...");
       console.log("Retrieving messages...");
       
-      const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'OpenAI-Beta': 'assistants=v1'
-        }
-      });
-
-      if (!messagesResponse.ok) {
-        const errorData = await messagesResponse.json();
-        console.error("Message retrieval error:", errorData);
-        throw new Error(`Failed to retrieve messages: ${JSON.stringify(errorData)}`);
-      }
-
-      const messagesData = await messagesResponse.json();
-      console.log("Messages retrieved successfully:", messagesData);
-      
-      // Store raw API response for debugging
-      setApiResponse(messagesData);
+      const messages = await openai.beta.threads.messages.list(thread.id);
+      console.log("Messages retrieved successfully");
       
       // Extract the assistant's response
-      const assistantMessages = messagesData.data.filter(msg => msg.role === 'assistant');
+      const assistantMessages = messages.data.filter(msg => msg.role === "assistant");
       
       if (assistantMessages.length > 0) {
         const latestMessage = assistantMessages[0];
         console.log("Latest assistant message:", latestMessage);
         
-        if (latestMessage.content && latestMessage.content.length > 0 && latestMessage.content[0].text) {
-          const analysisResult = latestMessage.content[0].text.value;
-          console.log("Analysis result extracted successfully");
-          setAnalysis(analysisResult);
+        if (latestMessage.content && latestMessage.content.length > 0) {
+          const textContent = latestMessage.content.find(content => content.type === "text");
           
-          // Store the analysis in Supabase
-          const { error } = await supabase
-            .from('image_analyses')
-            .insert({
-              user_id: user.id,
-              analysis: analysisResult,
-              image_count: images.length,
-              created_at: new Date().toISOString()
-            });
+          if (textContent && "text" in textContent) {
+            const analysisResult = textContent.text.value;
+            console.log("Analysis result extracted successfully");
+            setAnalysis(analysisResult);
             
-          if (error) {
-            console.error('Error storing analysis in database:', error);
-            toast.error(`Error storing analysis: ${error.message}`);
+            // Store the analysis in Supabase
+            const { error } = await supabase
+              .from('image_analyses')
+              .insert({
+                user_id: user.id,
+                analysis: analysisResult,
+                image_count: images.length,
+                created_at: new Date().toISOString()
+              });
+              
+            if (error) {
+              console.error('Error storing analysis in database:', error);
+              toast.error(`Error storing analysis: ${error.message}`);
+            } else {
+              console.log("Analysis stored in database successfully");
+            }
+            
+            toast.success("Images analyzed successfully");
           } else {
-            console.log("Analysis stored in database successfully");
+            throw new Error("No text content found in the assistant's response");
           }
-          
-          toast.success("Images analyzed successfully");
         } else {
           console.error("Unexpected message format:", latestMessage);
           throw new Error("Could not extract analysis result from API response");
@@ -261,7 +192,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       toast.error(error instanceof Error ? error.message : "Failed to analyze images");
     } finally {
       setIsAnalyzing(false);
-      setApiStatus(null);
+      setStatusMessage(null);
     }
   };
 
@@ -279,7 +210,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         </Button>
       </div>
 
-      {apiStatus && (
+      {statusMessage && (
         <Card className="border-blue-300 bg-blue-50">
           <CardHeader className="py-3">
             <CardTitle className="text-blue-600 text-sm">Status</CardTitle>
@@ -287,7 +218,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
           <CardContent className="py-2">
             <div className="text-blue-600 flex items-center gap-2">
               <div className="animate-spin h-4 w-4 border-2 border-blue-600 rounded-full border-t-transparent"></div>
-              {apiStatus}
+              {statusMessage}
             </div>
           </CardContent>
         </Card>
@@ -326,7 +257,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         </Card>
       )}
 
-      {!analysis && !error && !isAnalyzing && !apiStatus && (
+      {!analysis && !error && !isAnalyzing && !statusMessage && (
         <div className="text-center p-6 border border-dashed rounded-lg bg-gray-50">
           <p className="text-gray-500">
             Click "Analyze Images" to get AI feedback on your pitch images
@@ -337,7 +268,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         </div>
       )}
 
-      {isAnalyzing && !apiStatus && (
+      {isAnalyzing && !statusMessage && (
         <div className="text-center p-6 border rounded-lg bg-gray-50">
           <div className="flex justify-center mb-3">
             <div className="animate-spin h-6 w-6 border-3 border-blue-500 rounded-full border-t-transparent"></div>
@@ -346,15 +277,6 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
             Analyzing your images... This may take a minute or two.
           </p>
         </div>
-      )}
-      
-      {apiResponse && (
-        <details className="mt-4 border rounded p-2">
-          <summary className="cursor-pointer font-medium">Debug: API Response</summary>
-          <pre className="text-xs mt-2 p-2 bg-gray-100 rounded overflow-x-auto">
-            {JSON.stringify(apiResponse, null, 2)}
-          </pre>
-        </details>
       )}
     </div>
   );
