@@ -1,4 +1,3 @@
-
 import { ImageUploader } from "@/components/ImageUploader";
 import { ImageGrid } from "@/components/ImageGrid";
 import { ImageAnalysis } from "@/components/ImageAnalysis";
@@ -15,10 +14,11 @@ interface ImageManagementProps {
 export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManagementProps) => {
   const [images, setImages] = useState<any[]>([]);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
+  const [assistantIdMissing, setAssistantIdMissing] = useState(false);
 
   useEffect(() => {
     fetchImages();
-    checkApiKey();
+    checkConfigSettings();
   }, [refreshTrigger]);
 
   const fetchImages = async () => {
@@ -35,7 +35,7 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
     setImages(data || []);
   };
 
-  const checkApiKey = async () => {
+  const checkConfigSettings = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('verify-openai-key', {
         body: { checkOnly: true }
@@ -47,8 +47,16 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
       } else {
         setApiKeyMissing(false);
       }
+
+      const assistantId = import.meta.env.VITE_OPENAI_ASSISTANT_ID;
+      if (!assistantId) {
+        console.warn("OpenAI Assistant ID not configured");
+        setAssistantIdMissing(true);
+      } else {
+        setAssistantIdMissing(false);
+      }
     } catch (err) {
-      console.error("Error checking OpenAI API key:", err);
+      console.error("Error checking OpenAI configuration:", err);
       setApiKeyMissing(true);
     }
   };
@@ -71,6 +79,16 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
           <AlertTitle>OpenAI API Key Missing</AlertTitle>
           <AlertDescription>
             The OpenAI API key is not configured. Please add it to your .env file or Supabase project secrets.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {assistantIdMissing && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>OpenAI Assistant ID Missing</AlertTitle>
+          <AlertDescription>
+            The OpenAI Assistant ID is not configured. Please add it to your .env file or Supabase project secrets.
           </AlertDescription>
         </Alert>
       )}

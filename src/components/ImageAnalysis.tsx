@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,8 +6,8 @@ import { Sparkles, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// OpenAI Assistant ID for image analysis
-const ASSISTANT_ID = "asst_rSCcnqL8PYzpquRTsD8Owuub";
+// OpenAI Assistant ID from environment variable
+const ASSISTANT_ID = import.meta.env.VITE_OPENAI_ASSISTANT_ID || "asst_rSCcnqL8PYzpquRTsD8Owuub";
 
 interface ImageAnalysisProps {
   images: { id: number; image_url: string }[];

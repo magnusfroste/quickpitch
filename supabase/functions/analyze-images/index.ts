@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-const assistantId = 'asst_rSCcnqL8PYzpquRTsD8Owuub';
+const assistantId = Deno.env.get('OPENAI_ASSISTANT_ID') || 'asst_rSCcnqL8PYzpquRTsD8Owuub';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
