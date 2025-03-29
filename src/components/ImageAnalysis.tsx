@@ -34,25 +34,18 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
 
       const imageUrls = images.map(img => img.image_url);
 
-      // Call the analyze-images function
-      const response = await fetch(`${window.location.origin}/functions/v1/analyze-images`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
+      // Use supabase.functions.invoke instead of fetch for edge function call
+      const { data, error } = await supabase.functions.invoke("analyze-images", {
+        body: {
           imageUrls,
           userId: user.id
-        })
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze images');
+      if (error) {
+        throw new Error(error.message || 'Failed to analyze images');
       }
 
-      const data = await response.json();
       setAnalysis(data.analysis);
       toast.success("Images analyzed successfully");
     } catch (error) {
