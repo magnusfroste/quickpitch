@@ -13,6 +13,6 @@ port = 54322
 enabled = true
 port = 54323
 
-[[fetch.resources]]
-name = "agora-token"
-path = "npm:agora-token"
+[functions]
+[functions.import_map]
+imports = { "agora-token" = "npm:agora-token" }
