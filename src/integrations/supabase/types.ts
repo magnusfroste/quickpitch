@@ -177,6 +177,30 @@ export type Database = {
         }
         Relationships: []
       }
+      image_analyses: {
+        Row: {
+          analysis: string
+          created_at: string | null
+          id: string
+          image_count: number
+          user_id: string
+        }
+        Insert: {
+          analysis: string
+          created_at?: string | null
+          id?: string
+          image_count: number
+          user_id: string
+        }
+        Update: {
+          analysis?: string
+          created_at?: string | null
+          id?: string
+          image_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       letgo_classifieds: {
         Row: {
           category: string
