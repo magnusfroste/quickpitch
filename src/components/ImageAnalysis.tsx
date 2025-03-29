@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles } from "lucide-react";
+import { Sparkles, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [apiResponse, setApiResponse] = useState<any>(null); // Store the raw API response for debugging
   const [error, setError] = useState<string | null>(null);
+  const [apiStatus, setApiStatus] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
     if (images.length === 0) {
@@ -31,6 +32,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       setAnalysis(null);
       setApiResponse(null);
       setError(null);
+      setApiStatus("Starting analysis via Edge Function...");
 
       // Get current user
       console.log("Getting current user...");
@@ -53,6 +55,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       console.log(`Analyzing ${images.length} images:`, imageUrls);
 
       // Try using the Edge Function instead of direct OpenAI API call
+      setApiStatus("Calling Edge Function...");
       console.log("Calling analyze-images Edge Function...");
       const response = await fetch(`${window.location.origin}/functions/v1/analyze-images`, {
         method: "POST",
@@ -84,6 +87,22 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         setAnalysis(result.analysis);
         setApiResponse(result);
         toast.success("Images analyzed successfully");
+        
+        // Store the analysis in Supabase
+        const { error } = await supabase
+          .from('image_analyses')
+          .insert({
+            user_id: user.id,
+            analysis: result.analysis,
+            image_count: images.length,
+            created_at: new Date().toISOString()
+          });
+          
+        if (error) {
+          console.error('Error storing analysis in database:', error);
+        } else {
+          console.log("Analysis stored in database successfully");
+        }
       } else {
         console.error("No analysis in result:", result);
         throw new Error("No analysis returned from the API");
@@ -92,12 +111,17 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       console.error("Error analyzing images:", error);
       setError(error instanceof Error ? error.message : "Failed to analyze images");
       toast.error(error instanceof Error ? error.message : "Failed to analyze images");
+      setApiStatus("Edge Function failed, trying direct API...");
+      await handleAnalyzeWithOpenAI();
     } finally {
-      setIsAnalyzing(false);
+      setApiStatus(null);
+      if (!analysis && !error) {
+        setIsAnalyzing(false);
+      }
     }
   };
 
-  // Fallback to direct OpenAI API calls if edge function fails
+  // Direct OpenAI API calls if edge function fails
   const handleAnalyzeWithOpenAI = async () => {
     if (images.length === 0) {
       toast.error("Please upload at least one image to analyze");
@@ -106,9 +130,14 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
 
     try {
       setIsAnalyzing(true);
-      setAnalysis(null);
-      setApiResponse(null);
+      if (!analysis) {
+        setAnalysis(null);
+      }
+      if (!apiResponse) {
+        setApiResponse(null);
+      }
       setError(null);
+      setApiStatus("Starting analysis via direct API...");
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -118,9 +147,10 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       }
 
       const imageUrls = images.map(img => img.image_url);
-      console.log("Analyzing images:", imageUrls);
+      console.log("Analyzing images with direct API:", imageUrls);
 
       // Create a new thread
+      setApiStatus("Creating OpenAI thread...");
       console.log("Creating thread...");
       const threadResponse = await fetch("https://api.openai.com/v1/threads", {
         method: "POST",
@@ -131,6 +161,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         body: JSON.stringify({})
       });
 
+      console.log("Thread API response status:", threadResponse.status);
       if (!threadResponse.ok) {
         const errorText = await threadResponse.text();
         console.error("Thread creation failed:", errorText);
@@ -142,6 +173,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       console.log("Thread created with ID:", threadId);
 
       // Create a message with image URLs
+      setApiStatus("Adding images to thread...");
       console.log("Creating message with images...");
       const messageContent = {
         role: "user",
@@ -166,6 +198,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         body: JSON.stringify(messageContent)
       });
 
+      console.log("Message API response status:", messageResponse.status);
       if (!messageResponse.ok) {
         const errorText = await messageResponse.text();
         console.error("Message creation failed:", errorText);
@@ -174,6 +207,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       console.log("Message created successfully");
 
       // Run the assistant
+      setApiStatus("Running assistant...");
       console.log("Running assistant with ID:", ASSISTANT_ID);
       const runResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
         method: "POST",
@@ -186,6 +220,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         })
       });
 
+      console.log("Run API response status:", runResponse.status);
       if (!runResponse.ok) {
         const errorText = await runResponse.text();
         console.error("Run creation failed:", errorText);
@@ -198,6 +233,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       console.log("Run created with ID:", runId);
 
       // Poll for completion
+      setApiStatus("Waiting for analysis to complete...");
       let runStatus = runData.status;
       let attempts = 0;
       const maxAttempts = 60; // 5 minutes max (5s * 60)
@@ -205,6 +241,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       const pollInterval = setInterval(async () => {
         attempts++;
         console.log(`Poll attempt ${attempts}, current status: ${runStatus}`);
+        setApiStatus(`Waiting for analysis... Status: ${runStatus} (${attempts}/${maxAttempts})`);
         
         if (runStatus === 'completed' || runStatus === 'failed' || attempts >= maxAttempts) {
           clearInterval(pollInterval);
@@ -215,6 +252,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
           }
           
           // Retrieve messages
+          setApiStatus("Retrieving analysis results...");
           console.log("Retrieving messages...");
           const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
             headers: {
@@ -222,6 +260,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
             }
           });
 
+          console.log("Messages API response status:", messagesResponse.status);
           if (!messagesResponse.ok) {
             const errorText = await messagesResponse.text();
             console.error("Message retrieval failed:", errorText);
@@ -253,7 +292,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
                 .insert({
                   user_id: user.id,
                   analysis: analysisResult,
-                  image_count: images.length, // Add the missing image_count field
+                  image_count: images.length,
                   created_at: new Date().toISOString()
                 });
                 
@@ -263,6 +302,8 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
               } else {
                 console.log("Analysis stored in database successfully");
               }
+              
+              toast.success("Images analyzed successfully");
             } else {
               console.error("Unexpected message format:", latestMessage);
               throw new Error("Could not extract analysis result from API response");
@@ -273,7 +314,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
           }
           
           setIsAnalyzing(false);
-          toast.success("Images analyzed successfully");
+          setApiStatus(null);
         } else {
           // Check status
           const statusResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs/${runId}`, {
@@ -282,6 +323,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
             }
           });
           
+          console.log("Status API response:", statusResponse.status);
           if (!statusResponse.ok) {
             const errorText = await statusResponse.text();
             console.error("Status check failed:", errorText);
@@ -296,9 +338,10 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       }, 5000);
       
     } catch (error) {
-      console.error("Error analyzing images:", error);
+      console.error("Error analyzing images with direct API:", error);
       setError(error instanceof Error ? error.message : "Failed to analyze images");
       setIsAnalyzing(false);
+      setApiStatus(null);
       toast.error(error instanceof Error ? error.message : "Failed to analyze images");
     }
   };
@@ -328,6 +371,20 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         </div>
       </div>
 
+      {apiStatus && (
+        <Card className="border-blue-300 bg-blue-50">
+          <CardHeader className="py-3">
+            <CardTitle className="text-blue-600 text-sm">Status</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="text-blue-600 flex items-center gap-2">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-600 rounded-full border-t-transparent"></div>
+              {apiStatus}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {analysis && (
         <Card>
           <CardHeader>
@@ -345,24 +402,38 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       {error && (
         <Card className="border-red-300 bg-red-50">
           <CardHeader>
-            <CardTitle className="text-red-600">Error</CardTitle>
+            <CardTitle className="text-red-600 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Error
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-red-600">{error}</div>
+            <div className="mt-2">
+              <p className="text-sm text-red-500">
+                Check the console for more details. You may need to set up the OPENAI_API_KEY in your Supabase project secrets.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {!analysis && !error && !isAnalyzing && (
+      {!analysis && !error && !isAnalyzing && !apiStatus && (
         <div className="text-center p-6 border border-dashed rounded-lg bg-gray-50">
           <p className="text-gray-500">
             Click "Analyze Images" to get AI feedback on your pitch images
           </p>
+          <p className="text-xs text-gray-400 mt-2">
+            You must have at least one image uploaded
+          </p>
         </div>
       )}
 
-      {isAnalyzing && (
-        <div className="text-center p-6 border rounded-lg bg-gray-50 animate-pulse">
+      {isAnalyzing && !apiStatus && (
+        <div className="text-center p-6 border rounded-lg bg-gray-50">
+          <div className="flex justify-center mb-3">
+            <div className="animate-spin h-6 w-6 border-3 border-blue-500 rounded-full border-t-transparent"></div>
+          </div>
           <p className="text-gray-500">
             Analyzing your images... This may take a minute or two.
           </p>
