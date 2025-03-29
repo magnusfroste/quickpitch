@@ -1,3 +1,4 @@
+
 import { ImageUploader } from "@/components/ImageUploader";
 import { ImageGrid } from "@/components/ImageGrid";
 import { ImageAnalysis } from "@/components/ImageAnalysis";
@@ -5,6 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 interface ImageManagementProps {
   onUploadSuccess: () => void;
@@ -15,6 +17,7 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
   const [images, setImages] = useState<any[]>([]);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [assistantIdMissing, setAssistantIdMissing] = useState(false);
+  const [isCheckingConfig, setIsCheckingConfig] = useState(true);
 
   useEffect(() => {
     fetchImages();
@@ -37,27 +40,36 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
 
   const checkConfigSettings = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('verify-openai-key', {
-        body: { checkOnly: true }
-      });
+      setIsCheckingConfig(true);
+      const { data, error } = await supabase.functions.invoke('verify-openai-key');
       
-      if (error || !data?.hasKey) {
-        console.warn("OpenAI API key not configured");
+      console.log("Config check response:", data);
+      
+      if (error) {
+        console.error("Error checking config:", error);
+        toast.error("Failed to verify OpenAI configuration");
         setApiKeyMissing(true);
-      } else {
-        setApiKeyMissing(false);
-      }
-
-      const assistantId = import.meta.env.VITE_OPENAI_ASSISTANT_ID;
-      if (!assistantId) {
-        console.warn("OpenAI Assistant ID not configured");
         setAssistantIdMissing(true);
-      } else {
-        setAssistantIdMissing(false);
+        return;
+      }
+      
+      setApiKeyMissing(!data?.hasKey);
+      setAssistantIdMissing(!data?.hasAssistantId);
+      
+      // Double-check assistant ID from env if the edge function says it's missing
+      if (!data?.hasAssistantId) {
+        const clientSideAssistantId = import.meta.env.VITE_OPENAI_ASSISTANT_ID;
+        if (clientSideAssistantId) {
+          console.log("Client-side Assistant ID found:", clientSideAssistantId.substring(0, 4) + "...");
+          setAssistantIdMissing(false);
+        }
       }
     } catch (err) {
       console.error("Error checking OpenAI configuration:", err);
       setApiKeyMissing(true);
+      setAssistantIdMissing(true);
+    } finally {
+      setIsCheckingConfig(false);
     }
   };
 
@@ -73,22 +85,34 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
         <ImageGrid key={refreshTrigger} />
       </div>
 
-      {apiKeyMissing && (
+      {isCheckingConfig && (
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Checking OpenAI Configuration</AlertTitle>
+          <AlertDescription>
+            Verifying OpenAI API key and Assistant ID...
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!isCheckingConfig && apiKeyMissing && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>OpenAI API Key Missing</AlertTitle>
           <AlertDescription>
             The OpenAI API key is not configured. Please add it to your .env file or Supabase project secrets.
+            If you've already added it, try restarting the application or deploying again.
           </AlertDescription>
         </Alert>
       )}
 
-      {assistantIdMissing && (
+      {!isCheckingConfig && assistantIdMissing && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>OpenAI Assistant ID Missing</AlertTitle>
           <AlertDescription>
             The OpenAI Assistant ID is not configured. Please add it to your .env file or Supabase project secrets.
+            If you've already added it, try restarting the application or deploying again.
           </AlertDescription>
         </Alert>
       )}

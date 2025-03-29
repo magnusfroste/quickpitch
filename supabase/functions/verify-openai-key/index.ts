@@ -15,10 +15,12 @@ serve(async (req) => {
   try {
     // Check OpenAI API Key
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    console.log("API Key check:", openaiApiKey ? `Key found (${openaiApiKey.substring(0, 4)}...)` : "Key missing");
     const hasKey = !!openaiApiKey && openaiApiKey.length > 0;
     
     // Check Assistant ID
     const assistantId = Deno.env.get('OPENAI_ASSISTANT_ID');
+    console.log("Assistant ID check:", assistantId ? `ID found (${assistantId.substring(0, 4)}...)` : "ID missing");
     const hasAssistantId = !!assistantId && assistantId.length > 0;
     
     console.log("OpenAI API key check:", hasKey ? "Key present" : "Key missing");

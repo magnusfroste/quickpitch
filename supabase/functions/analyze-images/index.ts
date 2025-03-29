@@ -8,10 +8,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Load and log environment variables
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-const assistantId = Deno.env.get('OPENAI_ASSISTANT_ID') || 'asst_rSCcnqL8PYzpquRTsD8Owuub';
+const assistantId = Deno.env.get('OPENAI_ASSISTANT_ID');
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+console.log("Environment variables check:");
+console.log("- OpenAI API Key:", openaiApiKey ? `Found (${openaiApiKey.substring(0, 5)}...)` : "Missing");
+console.log("- Assistant ID:", assistantId ? `Found (${assistantId})` : "Missing");
+console.log("- Supabase URL:", supabaseUrl ? "Found" : "Missing");
+console.log("- Supabase Service Key:", supabaseServiceKey ? "Found" : "Missing");
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -23,8 +30,17 @@ serve(async (req) => {
     const { imageUrls, userId } = await req.json();
 
     if (!openaiApiKey) {
+      console.error("OpenAI API key is not configured");
       return new Response(
         JSON.stringify({ error: 'OpenAI API key is not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!assistantId) {
+      console.error("OpenAI Assistant ID is not configured");
+      return new Response(
+        JSON.stringify({ error: 'OpenAI Assistant ID is not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

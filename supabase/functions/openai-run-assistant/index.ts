@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+console.log("OpenAI API Key in openai-run-assistant:", openaiApiKey ? "Present" : "Missing");
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -16,6 +17,7 @@ serve(async (req) => {
 
   try {
     if (!openaiApiKey) {
+      console.error("OpenAI API key is not configured in openai-run-assistant");
       return new Response(
         JSON.stringify({ error: 'OpenAI API key is not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
