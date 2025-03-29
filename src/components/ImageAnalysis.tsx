@@ -79,7 +79,12 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       setStatusMessage("Adding images to thread...");
       console.log("Creating message with images...");
       
-      const messageContent = [
+      // Use the correct types for the message content
+      const messageContent: Array<{
+        type: "text" | "image_url";
+        text?: string;
+        image_url?: { url: string };
+      }> = [
         {
           type: "text",
           text: "Please analyze these pitch deck images for story, clarity, and effectiveness. Provide feedback on each image individually and how they work together as a pitch deck."
