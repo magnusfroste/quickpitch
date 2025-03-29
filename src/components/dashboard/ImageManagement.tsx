@@ -70,7 +70,7 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>OpenAI API Key Missing</AlertTitle>
           <AlertDescription>
-            The OpenAI API key is not configured in your Supabase project. Image analysis will not work without it.
+            The OpenAI API key is not configured. Please add it to your .env file or Supabase project secrets.
           </AlertDescription>
         </Alert>
       )}

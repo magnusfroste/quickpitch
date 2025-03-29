@@ -13,6 +13,8 @@ serve(async (req) => {
   }
 
   try {
+    // The key is still retrieved from Deno.env as this is a Supabase Edge Function
+    // For Edge Functions, environment variables are set in the Supabase dashboard
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     const hasKey = !!openaiApiKey && openaiApiKey.length > 0;
     
