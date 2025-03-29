@@ -17,6 +17,7 @@ interface ImageAnalysisProps {
 export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
+  const [apiResponse, setApiResponse] = useState<any>(null); // Store the raw API response for debugging
 
   const handleAnalyze = async () => {
     if (images.length === 0) {
@@ -27,6 +28,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
     try {
       setIsAnalyzing(true);
       setAnalysis(null);
+      setApiResponse(null);
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -39,6 +41,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       console.log("Analyzing images:", imageUrls);
 
       // Create a new thread
+      console.log("Creating thread...");
       const threadResponse = await fetch("https://api.openai.com/v1/threads", {
         method: "POST",
         headers: {
@@ -49,7 +52,9 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       });
 
       if (!threadResponse.ok) {
-        throw new Error(`Failed to create thread: ${await threadResponse.text()}`);
+        const errorText = await threadResponse.text();
+        console.error("Thread creation failed:", errorText);
+        throw new Error(`Failed to create thread: ${errorText}`);
       }
 
       const threadData = await threadResponse.json();
@@ -57,6 +62,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       console.log("Thread created with ID:", threadId);
 
       // Create a message with image URLs
+      console.log("Creating message with images...");
       const messageContent = {
         role: "user",
         content: [
@@ -81,11 +87,14 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       });
 
       if (!messageResponse.ok) {
-        throw new Error(`Failed to create message: ${await messageResponse.text()}`);
+        const errorText = await messageResponse.text();
+        console.error("Message creation failed:", errorText);
+        throw new Error(`Failed to create message: ${errorText}`);
       }
       console.log("Message created successfully");
 
       // Run the assistant
+      console.log("Running assistant with ID:", ASSISTANT_ID);
       const runResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
         method: "POST",
         headers: {
@@ -98,10 +107,13 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       });
 
       if (!runResponse.ok) {
-        throw new Error(`Failed to run assistant: ${await runResponse.text()}`);
+        const errorText = await runResponse.text();
+        console.error("Run creation failed:", errorText);
+        throw new Error(`Failed to run assistant: ${errorText}`);
       }
 
       const runData = await runResponse.json();
+      console.log("Run response data:", runData);
       const runId = runData.id;
       console.log("Run created with ID:", runId);
 
@@ -131,32 +143,45 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
           });
 
           if (!messagesResponse.ok) {
-            throw new Error(`Failed to retrieve messages: ${await messagesResponse.text()}`);
+            const errorText = await messagesResponse.text();
+            console.error("Message retrieval failed:", errorText);
+            throw new Error(`Failed to retrieve messages: ${errorText}`);
           }
 
           const messagesData = await messagesResponse.json();
+          console.log("Messages retrieved data:", messagesData);
           console.log("Messages retrieved successfully");
+          
+          // Store raw API response for debugging
+          setApiResponse(messagesData);
           
           // Extract the assistant's response
           const assistantMessages = messagesData.data.filter(msg => msg.role === 'assistant');
           
           if (assistantMessages.length > 0) {
             const latestMessage = assistantMessages[0];
-            const analysisResult = latestMessage.content[0].text.value;
-            console.log("Analysis result extracted successfully");
-            setAnalysis(analysisResult);
+            console.log("Latest assistant message:", latestMessage);
             
-            // Store the analysis in Supabase
-            const { error } = await supabase
-              .from('image_analyses')
-              .insert({
-                user_id: user.id,
-                analysis: analysisResult,
-                created_at: new Date().toISOString()
-              });
+            if (latestMessage.content && latestMessage.content.length > 0 && latestMessage.content[0].text) {
+              const analysisResult = latestMessage.content[0].text.value;
+              console.log("Analysis result extracted successfully");
+              setAnalysis(analysisResult);
               
-            if (error) {
-              console.error('Error storing analysis in database:', error);
+              // Store the analysis in Supabase
+              const { error } = await supabase
+                .from('image_analyses')
+                .insert({
+                  user_id: user.id,
+                  analysis: analysisResult,
+                  created_at: new Date().toISOString()
+                });
+                
+              if (error) {
+                console.error('Error storing analysis in database:', error);
+              }
+            } else {
+              console.error("Unexpected message format:", latestMessage);
+              throw new Error("Could not extract analysis result from API response");
             }
           } else {
             console.warn("No assistant messages found");
@@ -174,11 +199,14 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
           });
           
           if (!statusResponse.ok) {
+            const errorText = await statusResponse.text();
+            console.error("Status check failed:", errorText);
             clearInterval(pollInterval);
-            throw new Error(`Failed to check run status: ${await statusResponse.text()}`);
+            throw new Error(`Failed to check run status: ${errorText}`);
           }
           
           const statusData = await statusResponse.json();
+          console.log("Status check response:", statusData);
           runStatus = statusData.status;
         }
       }, 5000);
@@ -232,6 +260,16 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
             Analyzing your images... This may take a minute or two.
           </p>
         </div>
+      )}
+      
+      {/* Debug section to show raw API response */}
+      {apiResponse && (
+        <details className="mt-4 border rounded p-2">
+          <summary className="cursor-pointer font-medium">Debug: API Response</summary>
+          <pre className="text-xs mt-2 p-2 bg-gray-100 rounded overflow-x-auto">
+            {JSON.stringify(apiResponse, null, 2)}
+          </pre>
+        </details>
       )}
     </div>
   );
