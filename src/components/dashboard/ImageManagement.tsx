@@ -4,6 +4,8 @@ import { ImageGrid } from "@/components/ImageGrid";
 import { ImageAnalysis } from "@/components/ImageAnalysis";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface ImageManagementProps {
   onUploadSuccess: () => void;
@@ -12,9 +14,11 @@ interface ImageManagementProps {
 
 export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManagementProps) => {
   const [images, setImages] = useState<any[]>([]);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
   useEffect(() => {
     fetchImages();
+    checkApiKey();
   }, [refreshTrigger]);
 
   const fetchImages = async () => {
@@ -31,6 +35,24 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
     setImages(data || []);
   };
 
+  const checkApiKey = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-openai-key', {
+        body: { checkOnly: true }
+      });
+      
+      if (error || !data?.hasKey) {
+        console.warn("OpenAI API key not configured");
+        setApiKeyMissing(true);
+      } else {
+        setApiKeyMissing(false);
+      }
+    } catch (err) {
+      console.error("Error checking OpenAI API key:", err);
+      setApiKeyMissing(true);
+    }
+  };
+
   return (
     <>
       <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
@@ -42,6 +64,16 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
         <h2 className="text-xl font-semibold text-gray-900">Pitch Images</h2>
         <ImageGrid key={refreshTrigger} />
       </div>
+
+      {apiKeyMissing && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>OpenAI API Key Missing</AlertTitle>
+          <AlertDescription>
+            The OpenAI API key is not configured in your Supabase project. Image analysis will not work without it.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
         <ImageAnalysis images={images} />

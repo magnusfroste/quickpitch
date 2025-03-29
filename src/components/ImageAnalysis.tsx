@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // OpenAI Assistant ID for image analysis
-const ASSISTANT_ID = "asst_rSCcnqL8PYzpquRTsD8Owuub"; // Replace with your actual Assistant ID
+const ASSISTANT_ID = "asst_rSCcnqL8PYzpquRTsD8Owuub";
 
 interface ImageAnalysisProps {
   images: { id: number; image_url: string }[];
@@ -17,7 +17,7 @@ interface ImageAnalysisProps {
 export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
-  const [apiResponse, setApiResponse] = useState<any>(null); // Store the raw API response for debugging
+  const [apiResponse, setApiResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<string | null>(null);
 
@@ -54,7 +54,7 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       const imageUrls = images.map(img => img.image_url);
       console.log(`Analyzing ${images.length} images:`, imageUrls);
 
-      // Try using the Edge Function instead of direct OpenAI API call
+      // Try using the Edge Function
       setApiStatus("Calling Edge Function...");
       console.log("Calling analyze-images Edge Function...");
       const response = await fetch(`${window.location.origin}/functions/v1/analyze-images`, {
@@ -87,22 +87,6 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         setAnalysis(result.analysis);
         setApiResponse(result);
         toast.success("Images analyzed successfully");
-        
-        // Store the analysis in Supabase
-        const { error } = await supabase
-          .from('image_analyses')
-          .insert({
-            user_id: user.id,
-            analysis: result.analysis,
-            image_count: images.length,
-            created_at: new Date().toISOString()
-          });
-          
-        if (error) {
-          console.error('Error storing analysis in database:', error);
-        } else {
-          console.log("Analysis stored in database successfully");
-        }
       } else {
         console.error("No analysis in result:", result);
         throw new Error("No analysis returned from the API");
@@ -149,32 +133,36 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
       const imageUrls = images.map(img => img.image_url);
       console.log("Analyzing images with direct API:", imageUrls);
 
+      // First, verify we have the OpenAI API key
+      const { data: secrets, error: secretsError } = await supabase.functions.invoke('verify-openai-key', {
+        body: { checkOnly: true }
+      });
+      
+      if (secretsError || !secrets?.hasKey) {
+        console.error("OpenAI API key not found:", secretsError || "Key missing");
+        throw new Error("OpenAI API key not configured. Please add it in Supabase settings.");
+      }
+
       // Create a new thread
       setApiStatus("Creating OpenAI thread...");
       console.log("Creating thread...");
-      const threadResponse = await fetch("https://api.openai.com/v1/threads", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY || 'sk-dummy-key-for-development'}`
-        },
-        body: JSON.stringify({})
+      
+      const threadResponse = await supabase.functions.invoke('openai-thread-create', {
+        body: {}
       });
-
-      console.log("Thread API response status:", threadResponse.status);
-      if (!threadResponse.ok) {
-        const errorText = await threadResponse.text();
-        console.error("Thread creation failed:", errorText);
-        throw new Error(`Failed to create thread: ${errorText}`);
+      
+      if (threadResponse.error) {
+        console.error("Thread creation error:", threadResponse.error);
+        throw new Error(`Failed to create thread: ${threadResponse.error}`);
       }
-
-      const threadData = await threadResponse.json();
-      const threadId = threadData.id;
+      
+      const threadId = threadResponse.data.id;
       console.log("Thread created with ID:", threadId);
 
       // Create a message with image URLs
       setApiStatus("Adding images to thread...");
       console.log("Creating message with images...");
+      
       const messageContent = {
         role: "user",
         content: [
@@ -189,52 +177,42 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         ]
       };
 
-      const messageResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY || 'sk-dummy-key-for-development'}`
-        },
-        body: JSON.stringify(messageContent)
+      const messageResponse = await supabase.functions.invoke('openai-message-create', {
+        body: {
+          threadId,
+          message: messageContent
+        }
       });
 
-      console.log("Message API response status:", messageResponse.status);
-      if (!messageResponse.ok) {
-        const errorText = await messageResponse.text();
-        console.error("Message creation failed:", errorText);
-        throw new Error(`Failed to create message: ${errorText}`);
+      if (messageResponse.error) {
+        console.error("Message creation error:", messageResponse.error);
+        throw new Error(`Failed to create message: ${messageResponse.error}`);
       }
+      
       console.log("Message created successfully");
 
       // Run the assistant
       setApiStatus("Running assistant...");
       console.log("Running assistant with ID:", ASSISTANT_ID);
-      const runResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY || 'sk-dummy-key-for-development'}`
-        },
-        body: JSON.stringify({
-          assistant_id: ASSISTANT_ID
-        })
+      
+      const runResponse = await supabase.functions.invoke('openai-run-assistant', {
+        body: {
+          threadId,
+          assistantId: ASSISTANT_ID
+        }
       });
 
-      console.log("Run API response status:", runResponse.status);
-      if (!runResponse.ok) {
-        const errorText = await runResponse.text();
-        console.error("Run creation failed:", errorText);
-        throw new Error(`Failed to run assistant: ${errorText}`);
+      if (runResponse.error) {
+        console.error("Run creation error:", runResponse.error);
+        throw new Error(`Failed to run assistant: ${runResponse.error}`);
       }
 
-      const runData = await runResponse.json();
-      console.log("Run response data:", runData);
-      const runId = runData.id;
+      const runId = runResponse.data.id;
       console.log("Run created with ID:", runId);
 
       // Poll for completion
       setApiStatus("Waiting for analysis to complete...");
-      let runStatus = runData.status;
+      let runStatus = runResponse.data.status;
       let attempts = 0;
       const maxAttempts = 60; // 5 minutes max (5s * 60)
       
@@ -254,22 +232,20 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
           // Retrieve messages
           setApiStatus("Retrieving analysis results...");
           console.log("Retrieving messages...");
-          const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
-            headers: {
-              "Authorization": `Bearer ${process.env.OPENAI_API_KEY || 'sk-dummy-key-for-development'}`
+          
+          const messagesResponse = await supabase.functions.invoke('openai-messages-list', {
+            body: {
+              threadId
             }
           });
 
-          console.log("Messages API response status:", messagesResponse.status);
-          if (!messagesResponse.ok) {
-            const errorText = await messagesResponse.text();
-            console.error("Message retrieval failed:", errorText);
-            throw new Error(`Failed to retrieve messages: ${errorText}`);
+          if (messagesResponse.error) {
+            console.error("Message retrieval error:", messagesResponse.error);
+            throw new Error(`Failed to retrieve messages: ${messagesResponse.error}`);
           }
 
-          const messagesData = await messagesResponse.json();
-          console.log("Messages retrieved data:", messagesData);
-          console.log("Messages retrieved successfully");
+          const messagesData = messagesResponse.data;
+          console.log("Messages retrieved successfully:", messagesData);
           
           // Store raw API response for debugging
           setApiResponse(messagesData);
@@ -317,26 +293,23 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
           setApiStatus(null);
         } else {
           // Check status
-          const statusResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs/${runId}`, {
-            headers: {
-              "Authorization": `Bearer ${process.env.OPENAI_API_KEY || 'sk-dummy-key-for-development'}`
+          const statusResponse = await supabase.functions.invoke('openai-run-retrieve', {
+            body: {
+              threadId,
+              runId
             }
           });
           
-          console.log("Status API response:", statusResponse.status);
-          if (!statusResponse.ok) {
-            const errorText = await statusResponse.text();
-            console.error("Status check failed:", errorText);
+          if (statusResponse.error) {
+            console.error("Status check error:", statusResponse.error);
             clearInterval(pollInterval);
-            throw new Error(`Failed to check run status: ${errorText}`);
+            throw new Error(`Failed to check run status: ${statusResponse.error}`);
           }
           
-          const statusData = await statusResponse.json();
-          console.log("Status check response:", statusData);
-          runStatus = statusData.status;
+          runStatus = statusResponse.data.status;
+          console.log("Updated run status:", runStatus);
         }
       }, 5000);
-      
     } catch (error) {
       console.error("Error analyzing images with direct API:", error);
       setError(error instanceof Error ? error.message : "Failed to analyze images");
@@ -440,7 +413,6 @@ export const ImageAnalysis = ({ images }: ImageAnalysisProps) => {
         </div>
       )}
       
-      {/* Debug section to show raw API response */}
       {apiResponse && (
         <details className="mt-4 border rounded p-2">
           <summary className="cursor-pointer font-medium">Debug: API Response</summary>
