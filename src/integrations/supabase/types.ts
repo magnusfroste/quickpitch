@@ -54,6 +54,63 @@ export type Database = {
         }
         Relationships: []
       }
+      air_opening_balances: {
+        Row: {
+          account: string
+          balance: number
+          created_at: string | null
+          id: number
+          user_id: string
+        }
+        Insert: {
+          account: string
+          balance: number
+          created_at?: string | null
+          id?: number
+          user_id: string
+        }
+        Update: {
+          account?: string
+          balance?: number
+          created_at?: string | null
+          id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      air_templates: {
+        Row: {
+          account_number: string
+          created_at: string | null
+          credit: number
+          debit: number
+          description: string | null
+          id: number
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          account_number: string
+          created_at?: string | null
+          credit: number
+          debit: number
+          description?: string | null
+          id?: number
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          account_number?: string
+          created_at?: string | null
+          credit?: number
+          debit?: number
+          description?: string | null
+          id?: number
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       air_transactions: {
         Row: {
           account: string
@@ -120,31 +177,7 @@ export type Database = {
         }
         Relationships: []
       }
-      app_visits: {
-        Row: {
-          app_url: string
-          created_at: string | null
-          id: number
-          updated_at: string | null
-          visit_count: number | null
-        }
-        Insert: {
-          app_url: string
-          created_at?: string | null
-          id?: number
-          updated_at?: string | null
-          visit_count?: number | null
-        }
-        Update: {
-          app_url?: string
-          created_at?: string | null
-          id?: number
-          updated_at?: string | null
-          visit_count?: number | null
-        }
-        Relationships: []
-      }
-      classifieds: {
+      letgo_classifieds: {
         Row: {
           category: string
           created_at: string | null
@@ -186,12 +219,12 @@ export type Database = {
             foreignKeyName: "fk_seller"
             columns: ["seller_id"]
             isOneToOne: false
-            referencedRelation: "sellers"
+            referencedRelation: "letgo_sellers"
             referencedColumns: ["id"]
           },
         ]
       }
-      favourites: {
+      letgo_favourites: {
         Row: {
           classified_id: number
           created_at: string | null
@@ -215,39 +248,12 @@ export type Database = {
             foreignKeyName: "fk_classified"
             columns: ["classified_id"]
             isOneToOne: false
-            referencedRelation: "classifieds"
+            referencedRelation: "letgo_classifieds"
             referencedColumns: ["id"]
           },
         ]
       }
-      llm_urls: {
-        Row: {
-          created_at: string | null
-          endpoint: string
-          id: number
-          is_active: boolean | null
-          nick: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          endpoint: string
-          id?: number
-          is_active?: boolean | null
-          nick?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          endpoint?: string
-          id?: number
-          is_active?: boolean | null
-          nick?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      messages: {
+      letgo_messages: {
         Row: {
           classified_id: number
           content: string
@@ -277,10 +283,43 @@ export type Database = {
             foreignKeyName: "fk_classified"
             columns: ["classified_id"]
             isOneToOne: false
-            referencedRelation: "classifieds"
+            referencedRelation: "letgo_classifieds"
             referencedColumns: ["id"]
           },
         ]
+      }
+      letgo_sellers: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          id: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       migraine_entries: {
         Row: {
@@ -311,30 +350,6 @@ export type Database = {
           pain_intensity?: number
           pain_location?: string
           triggers?: string[]
-          user_id?: string
-        }
-        Relationships: []
-      }
-      opening_balances: {
-        Row: {
-          account: string
-          balance: number
-          created_at: string | null
-          id: number
-          user_id: string
-        }
-        Insert: {
-          account: string
-          balance: number
-          created_at?: string | null
-          id?: number
-          user_id: string
-        }
-        Update: {
-          account?: string
-          balance?: number
-          created_at?: string | null
-          id?: number
           user_id?: string
         }
         Relationships: []
@@ -480,6 +495,30 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_visits: {
+        Row: {
+          app_url: string
+          created_at: string | null
+          id: number
+          updated_at: string | null
+          visit_count: number | null
+        }
+        Insert: {
+          app_url: string
+          created_at?: string | null
+          id?: number
+          updated_at?: string | null
+          visit_count?: number | null
+        }
+        Update: {
+          app_url?: string
+          created_at?: string | null
+          id?: number
+          updated_at?: string | null
+          visit_count?: number | null
+        }
+        Relationships: []
+      }
       presentation_images: {
         Row: {
           created_at: string | null
@@ -552,82 +591,77 @@ export type Database = {
         }
         Relationships: []
       }
-      sellers: {
-        Row: {
-          bio: string | null
-          created_at: string | null
-          id: string
-          latitude: number | null
-          longitude: number | null
-          name: string | null
-          phone: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          bio?: string | null
-          created_at?: string | null
-          id: string
-          latitude?: number | null
-          longitude?: number | null
-          name?: string | null
-          phone?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          bio?: string | null
-          created_at?: string | null
-          id?: string
-          latitude?: number | null
-          longitude?: number | null
-          name?: string | null
-          phone?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      templates: {
-        Row: {
-          account_number: string
-          created_at: string | null
-          credit: number
-          debit: number
-          description: string | null
-          id: number
-          name: string
-          sort_order: number | null
-        }
-        Insert: {
-          account_number: string
-          created_at?: string | null
-          credit: number
-          debit: number
-          description?: string | null
-          id?: number
-          name: string
-          sort_order?: number | null
-        }
-        Update: {
-          account_number?: string
-          created_at?: string | null
-          credit?: number
-          debit?: number
-          description?: string | null
-          id?: number
-          name?: string
-          sort_order?: number | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      binary_quantize:
+        | {
+            Args: {
+              "": string
+            }
+            Returns: unknown
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: unknown
+          }
       get_secret: {
         Args: {
           secret_name: string
         }
         Returns: Json
+      }
+      halfvec_avg: {
+        Args: {
+          "": number[]
+        }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: {
+          "": unknown[]
+        }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
       }
       insert_record: {
         Args: {
@@ -635,6 +669,130 @@ export type Database = {
           p_record: Json
         }
         Returns: Json
+      }
+      ivfflat_bit_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      l2_norm:
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: number
+          }
+      l2_normalize:
+        | {
+            Args: {
+              "": string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: unknown
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: unknown
+          }
+      match_documents: {
+        Args: {
+          query_embedding: string
+          match_count?: number
+          filter?: Json
+        }
+        Returns: {
+          id: number
+          content: string
+          metadata: Json
+          similarity: number
+        }[]
+      }
+      sparsevec_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: {
+          "": unknown[]
+        }
+        Returns: number
+      }
+      vector_avg: {
+        Args: {
+          "": number[]
+        }
+        Returns: string
+      }
+      vector_dims:
+        | {
+            Args: {
+              "": string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: number
+          }
+      vector_norm: {
+        Args: {
+          "": string
+        }
+        Returns: number
+      }
+      vector_out: {
+        Args: {
+          "": string
+        }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: {
+          "": string
+        }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: {
+          "": unknown[]
+        }
+        Returns: number
       }
     }
     Enums: {
