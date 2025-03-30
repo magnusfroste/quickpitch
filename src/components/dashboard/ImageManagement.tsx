@@ -73,6 +73,7 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
 
       <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
         <h2 className="text-xl font-semibold text-gray-900">Pitch Images</h2>
+        <p className="text-gray-500 text-sm mb-4">Click on an image to view it in full size</p>
         <ImageGrid onImagesChanged={handleImagesChanged} />
       </div>
 
