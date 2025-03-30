@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,40 +33,36 @@ export const MeetingControls = ({
   const isChannelNameValid = channelName.trim().length > 0;
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
-      <h2 className="text-xl font-semibold text-gray-900">Meeting Controls</h2>
-      
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="channel-name">Meeting Code</Label>
-          <Input
-            id="channel-name"
-            value={channelName}
-            onChange={(e) => onChannelNameChange(e.target.value)}
-            placeholder="Enter meeting code"
-            className="max-w-md"
-          />
-        </div>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="channel-name" className="text-white">Meeting Code</Label>
+        <Input
+          id="channel-name"
+          value={channelName}
+          onChange={(e) => onChannelNameChange(e.target.value)}
+          placeholder="Enter meeting code"
+          className="bg-white/20 border-white/10 text-white placeholder:text-white/60"
+        />
+      </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Button
-            onClick={onJoinMeeting}
-            className="flex items-center gap-2"
-            disabled={!isChannelNameValid}
-          >
-            <Video className="h-4 w-4" />
-            Start Meeting
-          </Button>
-          <Button
-            variant="outline"
-            onClick={copyToClipboard}
-            className="flex items-center gap-2"
-            disabled={!isChannelNameValid}
-          >
-            <Copy className="h-4 w-4" />
-            Copy Link
-          </Button>
-        </div>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          onClick={onJoinMeeting}
+          className="bg-white text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+          disabled={!isChannelNameValid}
+        >
+          <Video className="h-4 w-4" />
+          Start Meeting
+        </Button>
+        <Button
+          variant="outline"
+          onClick={copyToClipboard}
+          className="border-white/30 text-white hover:bg-white/20 flex items-center gap-2"
+          disabled={!isChannelNameValid}
+        >
+          <Copy className="h-4 w-4" />
+          Copy Link
+        </Button>
       </div>
     </div>
   );

@@ -77,7 +77,7 @@ export const ImageGrid = ({ onImagesChanged }: ImageGridProps) => {
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         {images.map((image) => (
-          <div key={image.id} className="relative group bg-white rounded-lg overflow-hidden shadow-sm">
+          <div key={image.id} className="relative group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
             <div className="relative">
               <AspectRatio ratio={16/9} className="w-full">
                 <img
