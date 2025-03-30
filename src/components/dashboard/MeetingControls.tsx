@@ -35,33 +35,33 @@ export const MeetingControls = ({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="channel-name" className="text-white font-medium text-sm">Meeting Code</Label>
+        <Label htmlFor="channel-name" className="text-white font-semibold text-sm">Meeting Code</Label>
         <Input
           id="channel-name"
           value={channelName}
           onChange={(e) => onChannelNameChange(e.target.value)}
           placeholder="Enter meeting code"
-          className="bg-white/20 border-white/10 text-white placeholder:text-white/60 focus:border-white"
+          className="bg-white/20 border-white/10 text-white placeholder:text-white/60 focus:border-white focus-visible:ring-1 focus-visible:ring-white"
         />
       </div>
 
       <div className="flex flex-wrap gap-3">
         <Button
           onClick={onJoinMeeting}
-          className="bg-white text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-medium"
+          className="bg-white text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-semibold"
           disabled={!isChannelNameValid}
         >
           <Video className="h-4 w-4" />
-          Start Meeting
+          <span>Start Meeting</span>
         </Button>
         <Button
           variant="outline"
           onClick={copyToClipboard}
-          className="border-white/30 text-white hover:bg-white/20 flex items-center gap-2 whitespace-nowrap font-medium"
+          className="border-white/30 text-white hover:bg-white/20 flex items-center gap-2 whitespace-nowrap font-semibold"
           disabled={!isChannelNameValid}
         >
           <Copy className="h-4 w-4" />
-          Copy Invitation Link
+          <span>Copy Invitation Link</span>
         </Button>
       </div>
     </div>
