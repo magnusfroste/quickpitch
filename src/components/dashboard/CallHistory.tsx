@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type CallRecord = {
   channel_name: string;
@@ -51,8 +52,18 @@ export const CallHistory = () => {
     return (
       <Card className="p-4">
         <h2 className="text-xl font-semibold mb-4">Recent Calls</h2>
-        <div className="flex justify-center items-center h-[200px]">
-          <div className="animate-pulse text-gray-400">Loading call history...</div>
+        <div className="flex flex-col space-y-4 p-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+                <Skeleton className="h-5 w-10 rounded-full" />
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
     );
