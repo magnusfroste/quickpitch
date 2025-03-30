@@ -57,11 +57,11 @@ export const MeetingControls = ({
         <Button
           variant="outline"
           onClick={copyToClipboard}
-          className="border-white/30 text-white hover:bg-white/20 flex items-center gap-2"
+          className="border-white/30 text-white hover:bg-white/20 flex items-center gap-2 whitespace-nowrap"
           disabled={!isChannelNameValid}
         >
           <Copy className="h-4 w-4" />
-          Copy Link
+          Copy Invitation Link
         </Button>
       </div>
     </div>
