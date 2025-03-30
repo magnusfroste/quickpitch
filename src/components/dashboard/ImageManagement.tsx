@@ -34,12 +34,16 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
       return;
     }
 
+    console.log('Dashboard fetched images:', data?.length || 0);
     setImages(data || []);
   };
 
   const handleImagesChanged = () => {
+    console.log('Images changed, refreshing...');
     // Increment the counter to trigger a refresh
     setImagesRefreshCounter(prev => prev + 1);
+    // Also call the parent's refresh callback
+    onUploadSuccess();
   };
 
   const checkConfigSettings = () => {
@@ -64,10 +68,7 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
     <>
       <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
         <h2 className="text-xl font-semibold text-gray-900">Image Management</h2>
-        <ImageUploader onUploadSuccess={() => {
-          onUploadSuccess();
-          handleImagesChanged();
-        }} />
+        <ImageUploader onUploadSuccess={handleImagesChanged} />
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">

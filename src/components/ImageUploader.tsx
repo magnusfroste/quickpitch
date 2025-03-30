@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
@@ -71,7 +72,12 @@ export const ImageUploader = ({ onUploadSuccess }: ImageUploaderProps) => {
       if (dbError) throw dbError;
 
       toast.success('Image uploaded successfully');
-      onUploadSuccess?.();
+      
+      // Explicitly call the onUploadSuccess callback and log it for debugging
+      console.log("Upload successful, triggering refresh callback");
+      if (onUploadSuccess) {
+        onUploadSuccess();
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload image');
