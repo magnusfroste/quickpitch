@@ -16,11 +16,12 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
   const [images, setImages] = useState<any[]>([]);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [assistantIdMissing, setAssistantIdMissing] = useState(false);
+  const [imagesRefreshCounter, setImagesRefreshCounter] = useState(0);
 
   useEffect(() => {
     fetchImages();
     checkConfigSettings();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, imagesRefreshCounter]);
 
   const fetchImages = async () => {
     const { data, error } = await supabase
@@ -34,6 +35,11 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
     }
 
     setImages(data || []);
+  };
+
+  const handleImagesChanged = () => {
+    // Increment the counter to trigger a refresh
+    setImagesRefreshCounter(prev => prev + 1);
   };
 
   const checkConfigSettings = () => {
@@ -58,12 +64,15 @@ export const ImageManagement = ({ onUploadSuccess, refreshTrigger }: ImageManage
     <>
       <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
         <h2 className="text-xl font-semibold text-gray-900">Image Management</h2>
-        <ImageUploader onUploadSuccess={onUploadSuccess} />
+        <ImageUploader onUploadSuccess={() => {
+          onUploadSuccess();
+          handleImagesChanged();
+        }} />
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
         <h2 className="text-xl font-semibold text-gray-900">Pitch Images</h2>
-        <ImageGrid key={refreshTrigger} />
+        <ImageGrid onImagesChanged={handleImagesChanged} />
       </div>
 
       {apiKeyMissing && (

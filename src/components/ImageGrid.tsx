@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Trash2 } from "lucide-react";
@@ -10,7 +11,11 @@ interface PresentationImage {
   sort_order: number;
 }
 
-export const ImageGrid = () => {
+interface ImageGridProps {
+  onImagesChanged?: () => void;
+}
+
+export const ImageGrid = ({ onImagesChanged }: ImageGridProps) => {
   const [images, setImages] = useState<PresentationImage[]>([]);
 
   useEffect(() => {
@@ -32,6 +37,8 @@ export const ImageGrid = () => {
 
     console.log('Fetched images:', data);
     setImages(data || []);
+    // Notify parent component that images have changed
+    onImagesChanged?.();
   };
 
   const handleDelete = async (id: number) => {
@@ -51,6 +58,8 @@ export const ImageGrid = () => {
 
       setImages(images.filter(img => img.id !== id));
       toast.success('Image deleted successfully');
+      // Notify parent component that images have changed
+      onImagesChanged?.();
     } catch (error) {
       console.error('Delete error:', error);
       toast.error('Failed to delete image');
