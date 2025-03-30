@@ -1,9 +1,9 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface PresentationImage {
   id: number;
@@ -37,7 +37,6 @@ export const ImageGrid = ({ onImagesChanged }: ImageGridProps) => {
 
     console.log('Fetched images:', data);
     setImages(data || []);
-    // Notify parent component that images have changed
     onImagesChanged?.();
   };
 
@@ -58,7 +57,6 @@ export const ImageGrid = ({ onImagesChanged }: ImageGridProps) => {
 
       setImages(images.filter(img => img.id !== id));
       toast.success('Image deleted successfully');
-      // Notify parent component that images have changed
       onImagesChanged?.();
     } catch (error) {
       console.error('Delete error:', error);
@@ -67,15 +65,17 @@ export const ImageGrid = ({ onImagesChanged }: ImageGridProps) => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 gap-8">
       {images.map((image) => (
         <div key={image.id} className="relative group bg-white rounded-xl overflow-hidden shadow-sm">
-          <div className="aspect-[16/9] relative">
-            <img
-              src={image.image_url}
-              alt={`Presentation image ${image.id}`}
-              className="absolute inset-0 w-full h-full object-contain bg-gray-50"
-            />
+          <div className="relative">
+            <AspectRatio ratio={16/9} className="w-full">
+              <img
+                src={image.image_url}
+                alt={`Presentation image ${image.id}`}
+                className="absolute inset-0 w-full h-full object-contain bg-gray-50"
+              />
+            </AspectRatio>
           </div>
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center">
             <Button
