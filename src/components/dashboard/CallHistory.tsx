@@ -1,8 +1,10 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 
 type CallRecord = {
   channel_name: string;
@@ -17,19 +19,29 @@ export const CallHistory = () => {
 
   useEffect(() => {
     const fetchHistory = async () => {
-      const { data, error } = await supabase
-        .from('quickpitch_call_history')
-        .select('*')
-        .order('start_time', { ascending: false })
-        .limit(10);
+      setLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('quickpitch_call_history')
+          .select('*')
+          .order('start_time', { ascending: false })
+          .limit(10);
 
-      if (error) {
-        console.error('Error fetching call history:', error);
-        return;
+        if (error) {
+          console.error('Error fetching call history:', error);
+          toast.error('Failed to load call history');
+          return;
+        }
+
+        console.log('Fetched call history:', data);
+        setHistory(data || []);
+      } catch (err) {
+        console.error('Error in call history fetch:', err);
+        toast.error('Failed to load call history');
+      } finally {
+        setLoading(false);
       }
-
-      setHistory(data || []);
-      setLoading(false);
     };
 
     fetchHistory();
@@ -38,7 +50,10 @@ export const CallHistory = () => {
   if (loading) {
     return (
       <Card className="p-4">
-        <p className="text-gray-500">Loading call history...</p>
+        <h2 className="text-xl font-semibold mb-4">Recent Calls</h2>
+        <div className="flex justify-center items-center h-[200px]">
+          <div className="animate-pulse text-gray-400">Loading call history...</div>
+        </div>
       </Card>
     );
   }
@@ -48,7 +63,9 @@ export const CallHistory = () => {
       <h2 className="text-xl font-semibold mb-4">Recent Calls</h2>
       <ScrollArea className="h-[300px]">
         {history.length === 0 ? (
-          <p className="text-gray-500">No calls yet</p>
+          <div className="flex justify-center items-center h-[200px]">
+            <p className="text-gray-500">No calls yet</p>
+          </div>
         ) : (
           <div className="space-y-4">
             {history.map((call, index) => (
