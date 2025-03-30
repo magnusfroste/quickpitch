@@ -1,3 +1,5 @@
+
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -8,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, UserRound } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserMenuProps {
   onSettingsClick: () => void;
@@ -16,13 +19,39 @@ interface UserMenuProps {
 }
 
 export const UserMenu = ({ onSettingsClick, onSignOut }: UserMenuProps) => {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [initials, setInitials] = useState<string>("U");
+  
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Try to get the avatar URL from user metadata
+        const metadata = user.user_metadata;
+        if (metadata && metadata.avatar_url) {
+          setAvatarUrl(metadata.avatar_url);
+        }
+        
+        // Set initials based on email
+        if (user.email) {
+          setInitials(user.email.charAt(0).toUpperCase());
+        }
+      }
+    };
+    
+    fetchUserProfile();
+  }, []);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar>
-            <AvatarImage src="/placeholder.svg" alt="Profile" />
-            <AvatarFallback>U</AvatarFallback>
+            <AvatarImage src={avatarUrl || ""} alt="Profile" />
+            <AvatarFallback>
+              {initials}
+            </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
