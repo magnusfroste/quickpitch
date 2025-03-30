@@ -48,20 +48,20 @@ export const MeetingControls = ({
       <div className="flex flex-wrap gap-3">
         <Button
           onClick={onJoinMeeting}
-          className="bg-white text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-semibold"
+          className="!bg-white !text-blue-600 hover:!bg-blue-50 flex items-center gap-2 font-semibold"
           disabled={!isChannelNameValid}
         >
           <Video className="h-4 w-4" />
-          <span>Start Meeting</span>
+          <span className="!text-blue-600 font-semibold">Start Meeting</span>
         </Button>
         <Button
           variant="outline"
           onClick={copyToClipboard}
-          className="border-white text-white hover:bg-white/20 flex items-center gap-2 whitespace-nowrap font-semibold"
+          className="!border-white !text-white hover:!bg-white/20 flex items-center gap-2 whitespace-nowrap font-semibold"
           disabled={!isChannelNameValid}
         >
           <Copy className="h-4 w-4" />
-          <span>Copy Invitation Link</span>
+          <span className="!text-white font-semibold">Copy Invitation Link</span>
         </Button>
       </div>
     </div>
