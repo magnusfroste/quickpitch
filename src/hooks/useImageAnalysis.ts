@@ -82,7 +82,7 @@ export const useImageAnalysis = ({ images }: UseImageAnalysisProps) => {
       };
       
       // Create separate array for the content
-      const messageContent: Array<OpenAI.Beta.Threads.Messages.MessageContentParam> = [textContent];
+      const messageContent: Array<OpenAI.Beta.Threads.Messages.MessageContentPartParam> = [textContent];
       
       // Add each image to the content array
       for (const image of images) {
