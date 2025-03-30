@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Trash2, ZoomIn } from "lucide-react";
@@ -74,7 +75,7 @@ export const ImageGrid = ({ onImagesChanged }: ImageGridProps) => {
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         {images.map((image) => (
           <div key={image.id} className="relative group bg-white rounded-lg overflow-hidden shadow-sm">
             <div className="relative">
