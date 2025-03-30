@@ -49,20 +49,20 @@ export const MeetingControls = ({
         <Button
           onClick={onJoinMeeting}
           disabled={!isChannelNameValid}
-          className="bg-white hover:bg-gray-100"
+          className="bg-white/20 hover:bg-white/30 text-white border border-white/30"
         >
-          <Video className="h-4 w-4 text-blue-600" />
-          <span className="text-blue-600 font-medium">Start Meeting</span>
+          <Video className="h-4 w-4" />
+          <span>Start Meeting</span>
         </Button>
         
         <Button
           variant="outline"
           onClick={copyToClipboard}
           disabled={!isChannelNameValid}
-          className="border-white text-white hover:bg-white/20"
+          className="bg-white/20 hover:bg-white/30 text-white border border-white/30"
         >
           <Copy className="h-4 w-4" />
-          <span className="font-medium">Copy Invitation Link</span>
+          <span>Copy Invitation Link</span>
         </Button>
       </div>
     </div>
