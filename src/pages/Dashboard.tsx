@@ -42,9 +42,10 @@ const Dashboard = () => {
         </header>
 
         <main className="p-6 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-6">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-xl shadow-sm text-white">
+          {/* First row: Start Your Pitch and Recent Pitches side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="lg:col-span-1">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-xl shadow-sm text-white h-full">
                 <div className="flex items-center gap-3 mb-4">
                   <Layers className="h-6 w-6" />
                   <h2 className="text-xl font-semibold">Start Your Pitch</h2>
@@ -58,19 +59,22 @@ const Dashboard = () => {
                   onJoinMeeting={handleJoinMeeting}
                 />
               </div>
-              
-              <CallHistory />
             </div>
             
-            {isHost && (
-              <div className="lg:col-span-2 space-y-6">
-                <ImageManagement
-                  onUploadSuccess={handleUploadSuccess}
-                  refreshTrigger={refreshTrigger}
-                />
-              </div>
-            )}
+            <div className="lg:col-span-1">
+              <CallHistory />
+            </div>
           </div>
+          
+          {/* Second row: Pitch Presentation Manager with full width */}
+          {isHost && (
+            <div className="w-full">
+              <ImageManagement
+                onUploadSuccess={handleUploadSuccess}
+                refreshTrigger={refreshTrigger}
+              />
+            </div>
+          )}
         </main>
       </div>
     </div>
