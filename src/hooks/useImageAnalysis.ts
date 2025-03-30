@@ -8,9 +8,18 @@ interface UseImageAnalysisProps {
   images: { id: number; image_url: string }[];
 }
 
+export interface AnalysisResponse {
+  summary: string;
+  imageAnalyses: {
+    imageIndex: number;
+    feedback: string;
+  }[];
+  overallFeedback: string;
+}
+
 export const useImageAnalysis = ({ images }: UseImageAnalysisProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -75,10 +84,10 @@ export const useImageAnalysis = ({ images }: UseImageAnalysisProps) => {
       setStatusMessage("Adding images to thread...");
       console.log("Creating message with images...");
       
-      // First create the initial text message
+      // First create the initial text message with instructions to return JSON
       const textContent = {
         type: "text" as const,
-        text: "Please analyze these pitch deck images for story, clarity, and effectiveness. Provide feedback on each image individually and how they work together as a pitch deck."
+        text: "Please analyze these pitch deck images for story, clarity, and effectiveness. Provide feedback on each image individually and how they work together as a pitch deck. Return your analysis as a JSON object with this structure: { \"summary\": \"brief overall summary\", \"imageAnalyses\": [{ \"imageIndex\": 0, \"feedback\": \"feedback for first image\" }, ...], \"overallFeedback\": \"detailed overall feedback\" }"
       };
       
       // Create separate array for the content
@@ -150,8 +159,27 @@ export const useImageAnalysis = ({ images }: UseImageAnalysisProps) => {
           const textContent = latestMessage.content.find(content => content.type === "text");
           
           if (textContent && "text" in textContent) {
-            const analysisResult = textContent.text.value;
-            console.log("Analysis result extracted successfully");
+            let analysisResult: AnalysisResponse;
+            const textValue = textContent.text.value;
+            
+            try {
+              // Attempt to parse the response as JSON
+              analysisResult = JSON.parse(textValue);
+              console.log("Analysis result parsed as JSON successfully:", analysisResult);
+            } catch (parseError) {
+              console.error("Failed to parse analysis result as JSON:", parseError);
+              
+              // Fallback to text format with basic structure
+              analysisResult = {
+                summary: "Analysis could not be parsed as JSON",
+                imageAnalyses: [{ 
+                  imageIndex: 0, 
+                  feedback: textValue 
+                }],
+                overallFeedback: "Please check the raw analysis text."
+              };
+            }
+            
             setAnalysis(analysisResult);
             
             // Store the analysis in Supabase
@@ -159,7 +187,7 @@ export const useImageAnalysis = ({ images }: UseImageAnalysisProps) => {
               .from('image_analyses')
               .insert({
                 user_id: user.id,
-                analysis: analysisResult,
+                analysis: JSON.stringify(analysisResult),
                 image_count: images.length,
                 created_at: new Date().toISOString()
               });
