@@ -1,0 +1,12 @@
+# QuickPitch
+
+> QuickPitch is a minimalist video-pitch tool: the host shares a meeting code, the prospect joins in the browser, and the pitch is time-boxed to 20 minutes and 5 slides.
+
+## Features
+- Join a pitch with a meeting code, no install
+- Real-time video meeting (Agora)
+- Dashboard to upload and organise up to 5 pitch slides
+- Built-in 20-minute timer and call history
+
+## Links
+- App: https://quickpitch.lovable.app/
